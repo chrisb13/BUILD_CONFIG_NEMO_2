@@ -26,9 +26,9 @@ Known Issues:
 
 #########################################################################################################
 #########################################################################################################
-## 0-- First of all, choose a configuration name, e.g. WED12, AMU12, PERIANT025, etc, and save it.
+## 0-- First of all, choose a configuration name, e.g. AMU12, WED12, PERIANT025, etc, and save it.
 
-	export CONFIG='WED12'   ## NB: to redo if you start a new session along the following steps !!
+	export CONFIG='AMU12'   ## NB: to redo if you start a new session along the following steps !!
 
 
 #########################################################################################################
@@ -61,7 +61,7 @@ Known Issues:
 	svn co -r 6402 http://forge.ipsl.jussieu.fr/nemo/svn/trunk MY_NEMO ## for version 6402 of the trunk
         svn co http://forge.ipsl.jussieu.fr/nemo/svn/branches/2015/nemo_v3_6_STABLE MY_NEMO ## NEMO3.6 STABLE
 
-        ## Compile for a new configuration, e.g. the WED12 configuration (you can have several ones)
+        ## Compile for a new configuration, e.g. the AMU12 configuration (you can have several ones)
         cd MY_NEMO/NEMOGCM/CONFIG
         echo "$CONFIG OPA_SRC LIM_SRC_3" >> cfg.txt  ## here for OPA+LIM3 (see cfg.txt for other options)
         ./makenemo -h                ## find your architecture if it exists (e.g. X64_ADA)
@@ -106,7 +106,7 @@ Known Issues:
         #   ncks -x -v ocean_ref,ndepth_ref,deltaSA_ref,SA_ref,SAAR_ref GSW-Fortran/test/gsw_data_v3_0.nc gsw_data_v3_0.nc
         #   ncks -A gsw_data_v3_0_to_be_ncks-A.nc gsw_data_v3_0.nc 
 
-        # Edit your own namelist, e.g. namelist_WED12, and link namelist_pre to it:
+        # Edit your own namelist, e.g. namelist_AMU12, and link namelist_pre to it:
         vi namelist_${CONFIG}  ## Adapt from provided namelist examples (check namelist comments).
         ln -s -v namelist_${CONFIG} namelist_pre  ## namelist_pre is the file read by all the scripts.
         # Edit compile_ALL.sh, adapt fortran compiler (and maybe netcdf path), then execute it:
@@ -151,7 +151,7 @@ Known Issues:
 ## 5- Create the initial state (temperature and salinity)
 
         ./submit.sh extract_istate 01  ## -> should create the initial state for temperature and salinity 
-                                       ##    e.g. dta_temp_WED12.nc and dta_sal_WED12.nc
+                                       ##    e.g. dta_temp_AMU12.nc and dta_sal_AMU12.nc
                                        ##    (stored in directory defined as config_dir in the namelist)
 
 #########################################################################################################
@@ -159,7 +159,7 @@ Known Issues:
 ## 5- Create the lateral boundary conditions (u, v, T, S, SSH, sea-ice thic, sea-ice frac)
 
 	./submit.sh build_coordinates_bdy 01  ## -> creates the coordinate file for lateral boundaries
-                                              ##    e.g. coordinates_bdy_WED12.nc
+                                              ##    e.g. coordinates_bdy_AMU12.nc
 
         ./submit.sh extract_bdy_gridT 01 30   ## -> creates T,S bdy files and store them in a BDY folder
                                               ##    itself located in directory defined as config_dir
@@ -204,7 +204,7 @@ Known Issues:
        ##      
        ##      &grid_inputs
        ##          input_file = 'drowned_precip_DFS5.2_y1993.nc'
-       ##          nemo_file = 'coordinates_WED12.nc'
+       ##          nemo_file = 'coordinates_AMU12.nc'
        ##          datagrid_file = 'remap_data_grid.nc'
        ##          nemogrid_file = 'remap_nemo_grid.nc'
        ##          method = 'regular'
