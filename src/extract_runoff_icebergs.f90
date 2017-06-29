@@ -22,16 +22,20 @@ IMPLICIT NONE
 
 !-- namelist parameters :
 namelist /general/ config, config_dir
+namelist /griddata/ inputdir, file_in_coord_extract, file_in_bathy_extract, file_in_bathy_bdy, ln_isfcav,      &
+& nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, file_in_coord_bdy, ln_dateline, nn_perio
 namelist /runoff/ file_runoff_in, file_mask_runoff, nn_band
-INTEGER                                  :: nn_band
-CHARACTER(LEN=50)                        :: config
-CHARACTER(LEN=150)                       :: file_runoff_in, file_mask_runoff, config_dir
+INTEGER                               :: nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, nn_perio, nn_band
+CHARACTER(LEN=50)                     :: config
+CHARACTER(LEN=150)                    :: inputdir, file_in_bathy_extract, file_in_coord_extract, file_in_bathy_bdy, config_dir, &
+&                                        file_in_coord_bdy, file_rtopo_bathy, file_rtopo_isf_draft, file_runoff_in, file_mask_runoff
+LOGICAL                               :: ln_isfcav, ln_dateline
 
 INTEGER                                  :: fidA, status, dimID_x, dimID_y, dimID_time_counter, dimID_z, dimID_t, mx, my, mtime_counter, &
 &                                           mzreg, mtreg, time_counter_ID, nav_lon_ID, nav_lat_ID, Melt_ID, fidM, fidglo, jmin_ORCA12,   &
 &                                           i, j, iGLO, jGLO, kk, rr, rs, mxglo, myglo, mzglo, mtglo, fidMSH, l, tmask_ID, mb, kki, kkj, &
 &                                           socoefr_ID, fidC, ai, aj, bi, bj, iREG, jREG, mx_REG, my_REG, imin_ORCA12, dij, im1, ip1,    &
-&                                           jm1, jp1, mx_tmp, my_tmp
+&                                           jm1, jp1, mx_tmp, my_tmp, i0, j0
 CHARACTER(LEN=150)                       :: file_runoff_out, file_in_mask_REG, file_in_coord_REG
 REAL*8                                   :: chkland
 REAL*4,ALLOCATABLE,DIMENSION(:)          :: time_counter           
@@ -262,9 +266,13 @@ socoefr(:,:) = 0.0
 
 !! manual corrections :
 if ( TRIM(config) == 'AMU12' .or. TRIM(config) == 'AMU12y' ) then
-  tmask_REG(240:320,1:80) = 0.0 ! to remove SSS restoring in the TG & PIG Bay
+  i0 = nn_imin_extract - 1811  ! To keep the boxes at the same position even if
+  j0 = nn_jmin_extract -  571  ! nn_jmin_extract & nn_jmax_extract are changed.
+  tmask_REG(i0+240:i0+320,j0+1:j0+80) = 0.0 ! to remove SSS restoring in the TG & PIG Bay
 elseif ( TRIM(config) == 'WED12' ) then
-  tmask_REG(:,1:415) = 0.0 ! region where the old ORCA025 grid was masked
+  i0 = nn_imin_extract - 2464  ! To keep the boxes at the same position even if
+  j0 = nn_jmin_extract -  151  ! nn_jmin_extract & nn_jmax_extract are changed.
+  tmask_REG(:,j0+1:j0+415) = 0.0  ! region where the old ORCA025 grid was masked
 endif
 
 DO i=1,mx_REG

@@ -1,3 +1,0 @@
-! name of interpolation weights file :
-write(file_coeff,103) TRIM(config_dir), TRIM(config)
-103 FORMAT(a,'/coeff_linear_',a,'.nc')

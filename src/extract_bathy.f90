@@ -35,7 +35,7 @@ INTEGER :: fidORCA12, fidBDY, fidM, status, dimID_y, dimID_x, nav_lat_ID, nav_lo
 &          my_ORCA12, mx_ORCA12,  my_BDY, mx_BDY,  my_REG, mx_REG, imin_ORCA12, imax_ORCA12, jmin_ORCA12, jmax_ORCA12,            &
 &          ai, aj, bi, bj, iREG, jREG, jtmp, npts, kk, ki, kj, ni1, ni2, nj1, nj2, pi, pj, kiref, kjref, mx_tmp, my_tmp, e2f_ID, e2v_ID,  &
 &          e2u_ID, e2t_ID, e1f_ID, e1v_ID, e1u_ID, e1t_ID, gphif_ID, gphiv_ID, gphiu_ID, gphit_ID, glamf_ID, glamv_ID, glamu_ID, glamt_ID,&
-&          fidCOORDreg, fidCOORDpar 
+&          fidCOORDreg, fidCOORDpar, i0, j0
 
 CHARACTER(LEN=150) :: aaa, file_bathy_out, file_in_coord_REG
 
@@ -410,18 +410,25 @@ enddo
 
 if ( TRIM(config) == 'WED12' ) then
    
-    ! correction to avoid a closed cavity of 2x2x2 pts (identified after first mesh_mask creation)
-    isf_draft_REG     (241:242,667:668) = 0.0 
-    Bathymetry_isf_REG(241:242,667:668) = 0.0
+    ! Note that you DO NOT have to change the following in you change the domain size
+    ! through modifications of nn_imin_extract, nn_imax_extract, ... in the namelist 
 
-    ! no isf along eastern boundary :
-    isf_draft_REG     (1095:1122,668:703) = 0.0
-    Bathymetry_isf_REG(1095:1122,668:703) = Bathymetry_REG(1095:1122,668:703)
+    ! To keep the boxes at the same position:
+    i0 = imin_ORCA12 - 2464
+    j0 = jmin_ORCA12 -  151
+
+    ! correction to avoid a closed cavity of 2x2x2 pts (identified after first mesh_mask creation)
+    isf_draft_REG     (i0+241:i0+242,j0+667:j0+668) = 0.0 
+    Bathymetry_isf_REG(i0+241:i0+242,j0+667:j0+668) = 0.0
+
+    ! no isf along eastern boundary (adapt manually to adjust more accurately) :
+    isf_draft_REG     (i0+1095:mx_REG,j0+668:j0+703) = 0.0
+    Bathymetry_isf_REG(i0+1095:mx_REG,j0+668:j0+703) = Bathymetry_REG(i0+1095:mx_REG,j0+668:j0+703)
     
     ! boxes to fill the Bellingshausen Sea : filled over [imin:imax,jmin:my]
-    imin = (/   1 , 192 , 213 , 237 , 254 , 275 , 287 , 299 /)
-    imax = (/ 191 , 212 , 236 , 253 , 274 , 286 , 298 , 325 /)
-    jmin = (/ 494 , 807 , 835 , 862 , 876 , 894 , 899 , 903 /)
+    imin = (/   1+i0 , 192+i0 , 213+i0 , 237+i0 , 254+i0 , 275+i0 , 287+i0 , 299+i0 /)
+    imax = (/ 191+i0 , 212+i0 , 236+i0 , 253+i0 , 274+i0 , 286+i0 , 298+i0 , 325+i0 /)
+    jmin = (/ 494+j0 , 807+j0 , 835+j0 , 862+j0 , 876+j0 , 894+j0 , 899+j0 , 903+j0 /)
     write(*,*) 'Note for future bdy building:'
     write(*,*) '                    '
     write(*,*) '  ii_bdy_west(1)  = ', imax(8)+1
