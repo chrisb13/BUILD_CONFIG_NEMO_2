@@ -29,12 +29,13 @@ IMPLICIT NONE
 
 !-- namelist parameters :
 namelist /general/ config, config_dir
-namelist /griddata/ inputdir, file_in_coord_extract, file_in_bathy_extract, file_in_bathy_bdy, ln_isfcav,     &
+namelist /griddata/ inputdir, file_in_coord_extract, file_in_bathy_extract, file_in_bathy_bdy, nn_isfcav,     &
 & nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, file_in_coord_bdy, ln_dateline, nn_perio
-INTEGER                               :: nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, nn_perio
+INTEGER                               :: nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract,  &
+&                                        nn_isfcav, nn_perio
 CHARACTER(LEN=50)                     :: config
 CHARACTER(LEN=150)                    :: inputdir, file_in_bathy_extract, file_in_coord_extract, file_in_bathy_bdy, config_dir, file_in_coord_bdy
-LOGICAL                               :: ln_isfcav, ln_dateline
+LOGICAL                               :: ln_dateline
 
 !--
 INTEGER                                  :: fidhgr, dimID_y, dimID_x, my_GLO, mx_GLO, gphif_ID, gphiv_ID, &

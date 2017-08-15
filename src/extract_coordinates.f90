@@ -19,13 +19,14 @@ IMPLICIT NONE
 !-- namelist parameters :
 namelist /general/ config, config_dir
 namelist /griddata/ inputdir, file_in_coord_extract, file_in_bathy_extract, ln_dateline, nn_perio,     &
-&                   file_in_bathy_bdy, ln_isfcav, file_in_coord_bdy, nn_imin_extract, nn_imax_extract, &
+&                   file_in_bathy_bdy, nn_isfcav, file_in_coord_bdy, nn_imin_extract, nn_imax_extract, &
 &                   nn_jmin_extract, nn_jmax_extract
-INTEGER                               :: nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, nn_perio
+INTEGER                               :: nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, &
+&                                        nn_perio, nn_isfcav
 CHARACTER(LEN=50)                     :: config
 CHARACTER(LEN=150)                    :: inputdir, file_in_bathy_extract, file_in_coord_extract, file_in_bathy_bdy, &
 &                                        config_dir, file_in_coord_bdy
-LOGICAL                               :: ln_isfcav, ln_dateline
+LOGICAL                               :: ln_dateline
 
 !-- local variables :
 INTEGER :: fidORCA12, fidM, status, dimID_y, dimID_x, nav_lat_ID, nav_lon_ID, fidCOORDreg, & 
