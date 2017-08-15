@@ -20,7 +20,11 @@ file_in_bathy_bdy     = '/store/njourd/ORCA025/SOUTHG2V3_ORCA025_bathy.nc'  ! Ba
                                                                             !       lateral boundary conditions (e.g. ORCA025).
 file_in_coord_bdy     = '/store/njourd/ORCA025/SOUTHG2V3_ORCA025.L75-MJM91_mesh_hgr.nc'  ! Coordinates of the grid corresponding to the
                                                                                          ! lateral boundary conditions (e.g. ORCA025).
-ln_isfcav             = .true.                                              ! .true. if the domain includes ice shelves.
+nn_isfcav             = .true.                                              ! = 0 if the regional domain DOES NOT include ice shelves.
+                                                                            ! = 1 if the regional domain includes ice shelves but not 
+                                                                                  the simulation used as lateral boundary.
+                                                                            ! = 2 if both the regional domain and the simulation used as
+                                                                                  lateral boundaries include ice shelves.
 ln_dateline           = .false.                                             ! .true. if the domain includes the dateline
                                                                             ! .false if the domain includes the Greenwich Meridian
 nn_perio              = 0                                                   ! = 1 if the domain is periodic, =0 otherwise. 

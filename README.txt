@@ -18,9 +18,12 @@ To download NEMO, you need to register on http://www.nemo-ocean.eu/user/register
 Last updates:
 - New version for general lon/lat grid (bi-linear interpolation)
 
-Known Issues:
+Known caveats:
 - Requires the same vertical discretization in the domain and for the datsaset used at BDYs and
   initial state (to be improved soon).
+
+List of contributors: 
+- Ute Hausmann
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -164,8 +167,9 @@ Known Issues:
         ./submit.sh extract_bdy_gridT 01 30   ## -> creates T,S bdy files and store them in a BDY folder
                                               ##    itself located in directory defined as config_dir
 
-        ./submit.sh extract_bdy_gridU 01 30   ## -> creates U   bdy files and store them in a BDY folder
-        ./submit.sh extract_bdy_gridV 01 30   ## -> creates V   bdy files and store them in a BDY folder
+        ./submit.sh extract_bdy_gridU 01 30   ## -> creates U3d bdy files and store them in a BDY folder
+        ./submit.sh extract_bdy_gridV 01 30   ## -> creates V3d bdy files and store them in a BDY folder
+        ./submit.sh extract_bdy_psi 01 30     ## -> creates U2d,V2d bdy files and store them in a BDY folder
         ./submit.sh extract_bdy_icemod 01 30  ## -> creates ice bdy files and store them in a BDY folder
         ./submit.sh extract_bdy_ssh 01 30     ## -> creates SSH bdy files and store them in a BDY folder
 
