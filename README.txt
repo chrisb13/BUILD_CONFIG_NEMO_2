@@ -29,19 +29,25 @@ List of contributors:
 
 #########################################################################################################
 #########################################################################################################
-## 0-- First of all, choose a configuration name, e.g. AMU12, WED12, PERIANT025, etc, and save it.
+## 0-- First of all, choose a configuration name (e.g. AMU12, WED12, PERIANT05) and clone this git repo :
 
-	export CONFIG='AMU12'   ## NB: to redo if you start a new session along the following steps !!
+	export CONFIG='AMU12.L75'  ## NB: to redo if you start a new session along the following steps !!
+
+        cd $WORKDIR  ## can be your home, or any other directory...
+        
+        git clone https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2.git BUILD_CONFIG_${CONFIG}
+        # or : git clone git@github.com:nicojourdain/BUILD_CONFIG_NEMO_2.git BUILD_CONFIG_${CONFIG}
+        #      (if you have a github account with your public key uploaded)
 
 
 #########################################################################################################
 #########################################################################################################
 ## 1-- Get and install NEMO and XIOS (required for the preprocessing to build the mesh_mask file)
 
-        ## NB: on froggy (Grenoble), you will need to run this command to enable svn functions:
+        ## NB: on froggy (Ciment, Grenoble), you will need to run this command to enable svn functions:
         export ftp_proxy=http://www-cache.ujf-grenoble.fr:3128
 
-        cd $WORKDIR
+        cd $WORKDIR  ## can be your home, or anywhere else
 	mkdir models
 	cd models
 
