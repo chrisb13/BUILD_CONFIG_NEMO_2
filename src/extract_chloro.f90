@@ -261,7 +261,7 @@ status = NF90_PUT_ATT(fidM,CHLA_ID,"long_name","seawifs Chlorophyll-A")   ; call
 status = NF90_PUT_ATT(fidM,CHLA_ID,"units","-")                   ; call erreur(status,.TRUE.,"put_att_CHLA_ID")
 
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"history","Created using extract_chloro.f90")
-status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO")
+status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
 call erreur(status,.TRUE.,"put_att_GLOBAL_ID")
                               
 status = NF90_ENDDEF(fidM) ; call erreur(status,.TRUE.,"fin_definition") 

@@ -22,14 +22,15 @@ IMPLICIT NONE
 
 !-- namelist parameters :
 namelist /general/ config, config_dir
-namelist /griddata/ inputdir, file_in_coord_extract, file_in_bathy_extract, file_in_bathy_bdy, ln_isfcav,      &
+namelist /griddata/ inputdir, file_in_coord_extract, file_in_bathy_extract, file_in_bathy_bdy, nn_isfcav,      &
 & nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, file_in_coord_bdy, ln_dateline, nn_perio
 namelist /runoff/ file_runoff_in, file_mask_runoff, nn_band
-INTEGER                               :: nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, nn_perio, nn_band
+INTEGER                               :: nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract,   &
+&                                        nn_isfcav, nn_perio, nn_band
 CHARACTER(LEN=50)                     :: config
 CHARACTER(LEN=150)                    :: inputdir, file_in_bathy_extract, file_in_coord_extract, file_in_bathy_bdy, config_dir, &
 &                                        file_in_coord_bdy, file_rtopo_bathy, file_rtopo_isf_draft, file_runoff_in, file_mask_runoff
-LOGICAL                               :: ln_isfcav, ln_dateline
+LOGICAL                               :: ln_dateline
 
 INTEGER                                  :: fidA, status, dimID_x, dimID_y, dimID_time_counter, dimID_z, dimID_t, mx, my, mtime_counter, &
 &                                           mzreg, mtreg, time_counter_ID, nav_lon_ID, nav_lat_ID, Melt_ID, fidM, fidglo, jmin_ORCA12,   &
@@ -330,7 +331,7 @@ status = NF90_PUT_ATT(fidM,socoefr_ID,"units","-")            ; call erreur(stat
 status = NF90_PUT_ATT(fidM,socoefr_ID,"short_name","socoefr") ; call erreur(status,.TRUE.,"put_att_socoefr_ID")
 
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"history","Created using extract_runoff_icebergs.f90")
-status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO")
+status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
 call erreur(status,.TRUE.,"put_att_GLOBAL_ID")
                               
 status = NF90_ENDDEF(fidM) ; call erreur(status,.TRUE.,"fin_definition") 

@@ -88,7 +88,7 @@ CHARACTER(LEN=150)                       :: file_coeff, file_in_coord_REG
 ! Default values (replaced with namelist values if specified):
 config_dir        = '.'
 file_in_bathy_bdy = 'not_used'
-ln_isfcav         = .false.
+nn_isfcav         = 0
 ln_dateline       = .false.
 nn_perio          = 0
 

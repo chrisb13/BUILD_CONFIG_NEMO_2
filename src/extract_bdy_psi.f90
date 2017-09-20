@@ -596,7 +596,7 @@ DO kyear=nn_yeari,nn_yearf
         status = NF90_PUT_ATT(fidU,nbiu_ID,"units","unitless")                      ; call erreur(status,.TRUE.,"put_att_nbiu_ID")
         
         status = NF90_PUT_ATT(fidU,NF90_GLOBAL,"history","Created using extract_bdy_psi.f90")
-        status = NF90_PUT_ATT(fidU,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO")
+        status = NF90_PUT_ATT(fidU,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
         call erreur(status,.TRUE.,"put_att_GLOBAL")
         
         status = NF90_ENDDEF(fidU) ; call erreur(status,.TRUE.,"end definition") 

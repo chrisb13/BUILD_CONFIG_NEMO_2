@@ -35,7 +35,7 @@ INTEGER :: fidORCA12, fidM, status, dimID_y, dimID_x, nav_lat_ID, nav_lon_ID, fi
 &          e2u_ID, e2t_ID, e1f_ID, e1v_ID, e1u_ID, e1t_ID, gphif_ID, gphiv_ID, gphiu_ID,   &
 &          gphit_ID, glamf_ID, glamv_ID, glamu_ID, glamt_ID
 
-CHARACTER(LEN=150) :: aaa, file_bathy_out, file_coord_out, command_str
+CHARACTER(LEN=150) :: file_bathy_out, file_coord_out, command_str
 
 REAL(KIND=4),ALLOCATABLE,DIMENSION(:,:) :: nav_lat_ORCA12, nav_lon_ORCA12, nav_lat_ORCA025, nav_lon_ORCA025, nav_lat_REG, nav_lon_REG 
 
@@ -192,12 +192,14 @@ status = NF90_DEF_VAR(fidCOORDreg,"glamv",NF90_DOUBLE,(/dimID_x,dimID_y/),glamv_
 status = NF90_DEF_VAR(fidCOORDreg,"glamu",NF90_DOUBLE,(/dimID_x,dimID_y/),glamu_ID); call erreur(status,.TRUE.,"def_var_glamu_ID")
 status = NF90_DEF_VAR(fidCOORDreg,"glamt",NF90_DOUBLE,(/dimID_x,dimID_y/),glamt_ID); call erreur(status,.TRUE.,"def_var_glamt_ID")
 
-status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"history","Created using extract_bathy_coord.f90"); call erreur(status,.TRUE.,"put_att_GLOB1")
-status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"domain",TRIM(aaa));                                call erreur(status,.TRUE.,"put_att_GLOB2")
-status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"imin_extraction",imin_GLO);                     call erreur(status,.TRUE.,"put_att_GLOB3")
-status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"imax_extraction",imax_GLO);                     call erreur(status,.TRUE.,"put_att_GLOB4")
-status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"jmin_extraction",jmin_GLO);                     call erreur(status,.TRUE.,"put_att_GLOB5")
-status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"jmax_extraction",jmax_GLO);                     call erreur(status,.TRUE.,"put_att_GLOB6")
+status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"history","Created using extract_bathy_coord.f90")
+call erreur(status,.TRUE.,"put_att_GLOB1")
+status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
+call erreur(status,.TRUE.,"put_att_GLOBAL1")
+status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"imin_extraction",imin_GLO);  call erreur(status,.TRUE.,"put_att_GLOB3")
+status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"imax_extraction",imax_GLO);  call erreur(status,.TRUE.,"put_att_GLOB4")
+status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"jmin_extraction",jmin_GLO);  call erreur(status,.TRUE.,"put_att_GLOB5")
+status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"jmax_extraction",jmax_GLO);  call erreur(status,.TRUE.,"put_att_GLOB6")
 
 status = NF90_ENDDEF(fidCOORDreg); call erreur(status,.TRUE.,"end_definition_coord") 
 

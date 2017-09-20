@@ -527,7 +527,7 @@ status = NF90_PUT_ATT(fidTEMP,time_counter_ID,"standard_name","time")          ;
 status = NF90_PUT_ATT(fidTEMP,time_counter_ID,"axis","T")                      ; call erreur(status,.TRUE.,"put_att_time_counter_ID")
 
 status = NF90_PUT_ATT(fidTEMP,NF90_GLOBAL,"history","Created using extract_istate.f90")
-status = NF90_PUT_ATT(fidTEMP,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO")
+status = NF90_PUT_ATT(fidTEMP,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
 call erreur(status,.TRUE.,"put_att_GLOBAL")
 
 status = NF90_ENDDEF(fidTEMP) ; call erreur(status,.TRUE.,"end_definition") 

@@ -622,7 +622,7 @@ DO kyear=nn_sss_yeari,nn_sss_yearf
         status = NF90_PUT_ATT(fidM,time_ID,"axis","T")                              ; call erreur(status,.TRUE.,"put_att_time_ID")
         
         status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"history","Created using extract_SSS_restoring.f90")
-        status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO")
+        status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
         call erreur(status,.TRUE.,"put_att_GLOBAL")
         
         status = NF90_ENDDEF(fidM) ; call erreur(status,.TRUE.,"fin_definition") 

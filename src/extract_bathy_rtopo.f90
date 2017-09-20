@@ -23,14 +23,15 @@ IMPLICIT NONE
 
 !-- namelist parameters :
 namelist /general/ config, config_dir
-namelist /griddata/ inputdir, file_in_coord_extract, file_in_bathy_extract, file_in_bathy_bdy, ln_isfcav,      &
+namelist /griddata/ inputdir, file_in_coord_extract, file_in_bathy_extract, file_in_bathy_bdy, nn_isfcav,      &
 & nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, file_in_coord_bdy, ln_dateline, nn_perio
 namelist /rtopo/ file_rtopo_bathy, file_rtopo_isf_draft
-INTEGER                               :: nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract, nn_perio
+INTEGER                               :: nn_imin_extract, nn_imax_extract, nn_jmin_extract, nn_jmax_extract,   &
+&                                        nn_perio, nn_isfcav
 CHARACTER(LEN=50)                     :: config
 CHARACTER(LEN=150)                    :: inputdir, file_in_bathy_extract, file_in_coord_extract, file_in_bathy_bdy, config_dir, &
 &                                        file_in_coord_bdy, file_rtopo_bathy, file_rtopo_isf_draft
-LOGICAL                               :: ln_isfcav, ln_dateline
+LOGICAL                               :: ln_dateline
 
 !-- RTOPO variables :
 INTEGER :: fidRTOPO1, fidRTOPO2, dimID_latdim, dimID_londim, my_RTOPO, mx_RTOPO, bedrock_topography_ID, lat_ID, lon_ID, &
@@ -47,11 +48,12 @@ INTEGER :: fidORCA12, fidBDY, fidM, status, dimID_y, dimID_x, nav_lat_ID, nav_lo
 &          fidCOORDreg, fidCOORDpar, minlon, maxlon, minlat, maxlat, imin_RTOPO, imax_RTOPO, jmin_RTOPO, jmax_RTOPO, iREG, jREG,      &
 &          iRTOPO, jRTOPO, iREGm1, iREGp1, jREGm1, jREGp1, kk, mx_tmp, my_tmp, i0, j0
 
-CHARACTER(LEN=150) :: aaa, file_bathy_out, file_in_coord_REG
+CHARACTER(LEN=150) :: file_bathy_out, file_in_coord_REG
 
 INTEGER, ALLOCATABLE,DIMENSION(:,:) :: nn
 
-REAL(KIND=4),ALLOCATABLE,DIMENSION(:,:) :: gphit_REG, glamt_REG, zglamt_REG, isf_draft_REG, Bathymetry_isf_REG, Bathymetry_REG, Bathymetry_BDY
+REAL(KIND=4),ALLOCATABLE,DIMENSION(:,:) :: gphit_REG, glamt_REG, zglamt_REG, isf_draft_REG, Bathymetry_isf_REG, Bathymetry_REG, &
+&                                          Bathymetry_BDY, Bathymetry_isf_BDY, isf_draft_BDY
 
 INTEGER(KIND=4), DIMENSION(8) :: imin, imax, jmin
 
@@ -73,7 +75,7 @@ REAL*8                                 :: eps, aa
 ! Default values (replaced with namelist values if specified):
 config_dir        = '.'
 file_in_bathy_bdy = 'not_used'
-ln_isfcav         = .true.  
+nn_isfcav         = 0
 
 !- read namelist values
 OPEN (UNIT=1, FILE='namelist_pre' )
@@ -102,7 +104,7 @@ jmax_ORCA12 = nn_jmax_extract
 
 eps = 1.d-9
 
-if ( .not. ln_isfcav) then
+if ( nn_isfcav .eq. 0 ) then
   write(*,*) 'Seriously ?! Why using RTopo in a configuration with no ice shelves ??'
   write(*,*) 'Think about it, and come back when you change your mind...'
   stop
@@ -235,11 +237,34 @@ status = NF90_INQUIRE_DIMENSION(fidBDY,dimID_y,len=my_BDY); call erreur(status,.
 status = NF90_INQUIRE_DIMENSION(fidBDY,dimID_x,len=mx_BDY); call erreur(status,.TRUE.,"inq_dim_x_BDY")
 
 ALLOCATE(  Bathymetry_BDY (mx_BDY,my_BDY)  ) 
+if ( nn_isfcav .eq. 2 ) then
+  ALLOCATE(  Bathymetry_isf_BDY (mx_BDY,my_BDY)  )
+  ALLOCATE(  isf_draft_BDY (mx_BDY,my_BDY)  )
+endif
 
-status = NF90_INQ_VARID(fidBDY,"Bathymetry",Bathymetry_ID); call erreur(status,.TRUE.,"inq_Bathymetry_ID_BDY")
+status = NF90_INQ_VARID(fidBDY,"nav_lat",nav_lat_ID)
+if ( status .ne. 0 ) status = NF90_INQ_VARID(fidBDY,"lat",nav_lat_ID)
+if ( status .ne. 0 ) status = NF90_INQ_VARID(fidBDY,"latitude",nav_lat_ID)
+call erreur(status,.TRUE.,"inq_nav_lat_ID_BDY")
+status = NF90_INQ_VARID(fidBDY,"nav_lon",nav_lon_ID)
+if ( status .ne. 0 ) status = NF90_INQ_VARID(fidBDY,"lon",nav_lon_ID)
+if ( status .ne. 0 ) status = NF90_INQ_VARID(fidBDY,"longitude",nav_lon_ID)
+call erreur(status,.TRUE.,"inq_nav_lon_ID_BDY")
+status = NF90_INQ_VARID(fidBDY,"Bathymetry",Bathymetry_ID)
+call erreur(status,.TRUE.,"inq_Bathymetry_ID_BDY")
+if ( nn_isfcav .eq. 2 ) then
+  status = NF90_INQ_VARID(fidBDY,"Bathymetry_isf",Bathymetry_isf_ID)
+  call erreur(status,.TRUE.,"inq_Bathymetry_isf_ID_BDY")
+  status = NF90_INQ_VARID(fidBDY,"isf_draft",isf_draft_ID)
+  call erreur(status,.TRUE.,"inq_isf_draft_ID_BDY")
+endif
 
-status = NF90_GET_VAR(fidBDY,Bathymetry_ID,Bathymetry_BDY); call erreur(status,.TRUE.,"getvar_Bathymetry_BDY")
-   
+status = NF90_GET_VAR(fidBDY,Bathymetry_ID,Bathymetry_BDY);         call erreur(status,.TRUE.,"getvar_Bathymetry_BDY")
+if ( nn_isfcav .eq. 2 ) then
+  status = NF90_GET_VAR(fidBDY,Bathymetry_isf_ID,Bathymetry_isf_BDY); call erreur(status,.TRUE.,"getvar_Bathymetry_isf_BDY")
+  status = NF90_GET_VAR(fidBDY,isf_draft_ID,isf_draft_BDY);           call erreur(status,.TRUE.,"getvar_isf_draft_BDY")
+endif   
+
 status = NF90_CLOSE(fidBDY); call erreur(status,.TRUE.,"close_coarse_bathy_file")
 
 !===================================================================
@@ -395,6 +420,7 @@ write(*,*) 'Halo with bathy from the dataset used as lateral boundaries...'
 !=== Interpolate the bathymetry of lateral boundary conditions over a npts-point halo :
 do jREG=1,my_REG
 
+    !-- Eastern BDY :
     do iREG=1,npts
       aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
@@ -402,28 +428,55 @@ do jREG=1,my_REG
         &                               + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+        if ( nn_isfcav .eq. 1 ) then
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+          isf_draft_REG      (iREG,jREG) = 0.e0 
+        elseif ( nn_isfcav .eq. 2 ) then
+          Bathymetry_isf_REG (iREG,jREG) =  (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+          isf_draft_REG (iREG,jREG) =  (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+        endif
       else
         Bathymetry_REG (iREG,jREG) = 0.e0
-      endif
-      if ( ln_isfcav) then
-        isf_draft_REG      (iREG,jREG) = 0.e0
-        Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        if ( nn_isfcav .ge. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        endif
       endif
     enddo
 
+    !-- Western BDY :
+    aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
     do iREG=mx_REG-npts+1,mx_REG
-      aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
         Bathymetry_REG (iREG,jREG) =  (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+        if ( nn_isfcav .eq. 1 ) then
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+          isf_draft_REG      (iREG,jREG) = 0.e0 
+        elseif ( nn_isfcav .eq. 2 ) then
+          Bathymetry_isf_REG (iREG,jREG) =  (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+          isf_draft_REG (iREG,jREG) =  (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+        endif
       else
         Bathymetry_REG (iREG,jREG) = 0.e0
-      endif
-      if ( ln_isfcav) then
-        isf_draft_REG      (iREG,jREG) = 0.e0
-        Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        if ( nn_isfcav .ge. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        endif
       endif
     enddo
 
@@ -431,6 +484,7 @@ enddo
 
 do iREG=npts+1,mx_REG-npts
 
+    !- Southern BDY :
     do jREG=1,npts
       aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
@@ -438,15 +492,29 @@ do iREG=npts+1,mx_REG-npts
         &                               + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+        if ( nn_isfcav .eq. 1 ) then
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+          isf_draft_REG      (iREG,jREG) = 0.e0 
+        elseif ( nn_isfcav .eq. 2 ) then
+          Bathymetry_isf_REG (iREG,jREG) =  (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+          isf_draft_REG (iREG,jREG) =  (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+        endif
       else
         Bathymetry_REG (iREG,jREG) = 0.e0
-      endif
-      if ( ln_isfcav) then
-        isf_draft_REG      (iREG,jREG) = 0.e0
-        Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        if ( nn_isfcav .ge. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        endif
       endif
     enddo
 
+    !- Northern BDY :
     do jREG=my_REG-npts+1,my_REG
       aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
@@ -454,12 +522,25 @@ do iREG=npts+1,mx_REG-npts
         &                               + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+        if ( nn_isfcav .eq. 1 ) then
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+          isf_draft_REG      (iREG,jREG) = 0.e0 
+        elseif ( nn_isfcav .eq. 2 ) then
+          Bathymetry_isf_REG (iREG,jREG) =  (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+          &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+          isf_draft_REG (iREG,jREG) =  (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+          &                              + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+        endif
       else
         Bathymetry_REG (iREG,jREG) = 0.e0
-      endif
-      if ( ln_isfcav) then
-        isf_draft_REG      (iREG,jREG) = 0.e0
-        Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        if ( nn_isfcav .ge. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        endif
       endif
     enddo
 
@@ -470,6 +551,7 @@ write(*,*) 'Smooth transition...'
 !=== smooth transition from the Bathymetry of lateral boundaries to the interior bathymetry (over npts points again) :
 do jREG=npts+1,my_REG-npts
 
+    !-- Western BDY :
     do iREG=npts+1,2*npts
       aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
@@ -477,30 +559,61 @@ do jREG=npts+1,my_REG-npts
         &                                                     + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)                   &
         &                                                     + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)                   &
         &                                                     + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa            &
-        &                               + (iREG-npts)     * Bathymetry_REG(iREG,jREG)                                                            ) / (npts+1)  
+        &                               + (iREG-npts)     * Bathymetry_REG(iREG,jREG)                                                         ) / (npts+1)
+        if ( nn_isfcav .eq. 1 ) then
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+          isf_draft_REG      (iREG,jREG) = 0.e0
+        elseif ( nn_isfcav .eq. 2 ) then
+          Bathymetry_isf_REG (iREG,jREG) =  (   (2*npts+1-iREG) * (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)           &
+          &                                                         + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)           &
+          &                                                         + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)           &
+          &                                                         + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa    &
+          &                                   + (iREG-npts)     * Bathymetry_isf_REG(iREG,jREG)                                                         ) / (npts+1)  
+          isf_draft_REG (iREG,jREG) =  (   (2*npts+1-iREG) * (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)           &
+          &                                                    + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)           &
+          &                                                    + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)           &
+          &                                                    + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa    &
+          &                              + (iREG-npts)     * isf_draft_REG(iREG,jREG)                                                         ) / (npts+1)  
+        endif
       else
         Bathymetry_REG (iREG,jREG) = 0.e0
-      endif
-      if ( ln_isfcav) then
-        isf_draft_REG      (iREG,jREG) = 0.e0
-        Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        if ( nn_isfcav .ge. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        endif
       endif
     enddo
 
+    !-- Eastern BDY :
     do iREG=mx_REG-2*npts+1,mx_REG-npts
       aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
-        Bathymetry_REG (iREG,jREG) =  (   (mx_REG-npts+1-iREG) * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)                   &
-        &                                                          + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)                   &
-        &                                                          + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)                   &
-        &                                                          + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa            &
-        &                               + (iREG-mx_REG+2*npts) * Bathymetry_REG(iREG,jREG)                                                            ) / (npts+1)  
+        Bathymetry_REG (iREG,jREG) =  (   (iREG-mx_REG+2*npts) * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)          &
+        &                                                          + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)          &
+        &                                                          + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)          &
+        &                                                          + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa   &
+        &                               + (mx_REG-npts+1-iREG) * Bathymetry_REG(iREG,jREG)                                                        ) / (npts+1) 
+        if ( nn_isfcav .eq. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        elseif ( nn_isfcav .eq. 2 ) then
+          Bathymetry_isf_REG (iREG,jREG) =  (   (iREG-mx_REG+2*npts) * (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)        &
+          &                                                              + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)        &
+          &                                                              + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)        &
+          &                                                              + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa &
+          &                                   + (mx_REG-npts+1-iREG) * Bathymetry_isf_REG(iREG,jREG)                                                        ) / (npts+1)
+          isf_draft_REG (iREG,jREG) =  (   (iREG-mx_REG+2*npts) * (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)        &
+          &                                                         + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)        &
+          &                                                         + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)        &
+          &                                                         + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa &
+          &                              + (mx_REG-npts+1-iREG) * isf_draft_REG(iREG,jREG)                                                        ) / (npts+1)
+        endif
       else
         Bathymetry_REG (iREG,jREG) = 0.e0
-      endif
-      if ( ln_isfcav) then
-        isf_draft_REG      (iREG,jREG) = 0.e0
-        Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        if ( nn_isfcav .ge. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        endif
       endif
     enddo
 
@@ -508,37 +621,69 @@ enddo
 
 do iREG=2*npts+1,mx_REG-2*npts
 
+    !-- Southern BDY :
     do jREG=npts+1,2*npts
       aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
-        Bathymetry_REG (iREG,jREG) =  (   (2*npts+1-jREG) * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)                   &
-        &                                                     + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)                   &
-        &                                                     + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)                   &
-        &                                                     + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa            &
-        &                               + (jREG-npts)     * Bathymetry_REG(iREG,jREG)                                                            ) / (npts+1)  
+        Bathymetry_REG (iREG,jREG) =  (   (2*npts+1-jREG) * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)           &
+        &                                                     + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)           &
+        &                                                     + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)           &
+        &                                                     + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa    &
+        &                               + (jREG-npts)     * Bathymetry_REG(iREG,jREG)                                                        ) / (npts+1)  
+        if ( nn_isfcav .eq. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        elseif ( nn_isfcav .eq. 2 ) then
+          Bathymetry_isf_REG (iREG,jREG) =  (   (2*npts+1-jREG) * (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)           &
+          &                                                         + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)           &
+          &                                                         + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)           &
+          &                                                         + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa    &
+          &                                   + (jREG-npts)     * Bathymetry_isf_REG(iREG,jREG)                                                        ) / (npts+1)  
+          isf_draft_REG (iREG,jREG) =  (   (2*npts+1-jREG) * (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)           &
+          &                                                    + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)           &
+          &                                                    + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)           &
+          &                                                    + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa    &
+          &                              + (jREG-npts)     * isf_draft_REG(iREG,jREG)                                                        ) / (npts+1)
+        endif
       else
         Bathymetry_REG (iREG,jREG) = 0.e0
-      endif
-      if ( ln_isfcav) then
-        isf_draft_REG      (iREG,jREG) = 0.e0
-        Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        if ( nn_isfcav .ge. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        endif
       endif
     enddo
 
+    !-- Northern BDY :
     do jREG=my_REG-2*npts+1,my_REG-npts
       aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
-        Bathymetry_REG (iREG,jREG) =  (   (my_REG-npts+1-jREG) * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)                   &
-        &                                                          + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)                   &
-        &                                                          + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)                   &
-        &                                                          + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa            &
-        &                               + (jREG-my_REG+2*npts) * Bathymetry_REG(iREG,jREG)                                                            ) / (npts+1)  
+        Bathymetry_REG (iREG,jREG) =  (   (jREG-my_REG+2*npts) * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)          &
+        &                                                          + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)          &
+        &                                                          + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)          &
+        &                                                          + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa   &
+        &                               + (my_REG-npts+1-jREG) * Bathymetry_REG(iREG,jREG)                                                        ) / (npts+1)  
+        if ( nn_isfcav .eq. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        elseif ( nn_isfcav .eq. 2 ) then
+          Bathymetry_isf_REG (iREG,jREG) =  (   (jREG-my_REG+2*npts) * (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)         &
+          &                                                              + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)         &
+          &                                                              + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)         &
+          &                                                              + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa  &
+          &                                   + (my_REG-npts+1-jREG) * Bathymetry_isf_REG(iREG,jREG)                                                        ) / (npts+1)  
+          isf_draft_REG (iREG,jREG) =  (   (jREG-my_REG+2*npts) * (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)          &
+          &                                                         + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)          &
+          &                                                         + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)          &
+          &                                                         + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa   &
+          &                              + (my_REG-npts+1-jREG) * isf_draft_REG(iREG,jREG)                                                        ) / (npts+1) 
+        endif 
       else
         Bathymetry_REG (iREG,jREG) = 0.e0
-      endif
-      if ( ln_isfcav) then
-        isf_draft_REG      (iREG,jREG) = 0.e0
-        Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        if ( nn_isfcav .ge. 1 ) then
+          isf_draft_REG      (iREG,jREG) = 0.e0
+          Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+        endif
       endif
     enddo
 
@@ -549,7 +694,7 @@ enddo
 !=================================================================================
 
 if ( TRIM(config) == 'WED12' ) then
-  
+   
     ! Note that you DO NOT have to change the following in you change the domain size
     ! through modifications of nn_imin_extract, nn_imax_extract, ... in the namelist 
 
@@ -594,12 +739,25 @@ if ( TRIM(config) == 'WED12' ) then
             &                               + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
             &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
             &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+            if ( nn_isfcav .eq. 1 ) then
+              isf_draft_REG      (iREG,jREG) = 0.e0
+              Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            elseif ( nn_isfcav .eq. 2 ) then
+              Bathymetry_isf_REG (iREG,jREG) =  (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+              &                                   + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+              &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+              &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+              isf_draft_REG (iREG,jREG) =  (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+              &                              + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+              &                              + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+              &                              + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+            endif
           else
             Bathymetry_REG (iREG,jREG) = 0.e0
-          endif
-          if ( ln_isfcav) then
-            isf_draft_REG      (iREG,jREG) = 0.e0
-            Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            if ( nn_isfcav .ge. 1 ) then
+              isf_draft_REG      (iREG,jREG) = 0.e0
+              Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            endif
           endif
       enddo
     enddo
@@ -613,12 +771,25 @@ if ( TRIM(config) == 'WED12' ) then
             &                               + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
             &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
             &                               + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+            if ( nn_isfcav .eq. 1 ) then
+              isf_draft_REG      (iREG,jREG) = 0.e0
+              Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            elseif ( nn_isfcav .eq. 2 ) then
+              Bathymetry_isf_REG (iREG,jREG) =  (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+              &                                   + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+              &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+              &                                   + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+              isf_draft_REG (iREG,jREG) =  (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
+              &                              + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
+              &                              + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)   &
+              &                              + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa
+            endif 
           else
             Bathymetry_REG (iREG,jREG) = 0.e0
-          endif
-          if ( ln_isfcav) then
-            isf_draft_REG      (iREG,jREG) = 0.e0
-            Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            if ( nn_isfcav .ge. 1 ) then
+              isf_draft_REG      (iREG,jREG) = 0.e0
+              Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            endif
           endif
       enddo
     enddo
@@ -629,17 +800,32 @@ if ( TRIM(config) == 'WED12' ) then
       do iREG=imax(8)+npts+1,imax(8)+2*npts
           aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
           if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
-            Bathymetry_REG (iREG,jREG) =  (   (imax(8)+2*npts-iREG+1) * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)                   &
-            &                                                             + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)                   &
-            &                                                             + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)                   &
-            &                                                             + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa            &
-            &                               + (iREG-imax(8)-npts)     * Bathymetry_REG(iREG,jREG)                                                            ) / (npts+1)  
+            Bathymetry_REG (iREG,jREG) =  (   (iREG-imax(8)-npts)     * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)        &
+            &                                                             + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)        &
+            &                                                             + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)        &
+            &                                                             + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa &
+            &                               + (imax(8)+2*npts-iREG+1) * Bathymetry_REG(iREG,jREG)                                                        ) / (npts+1)
+            if ( nn_isfcav .eq. 1 ) then
+              isf_draft_REG      (iREG,jREG) = 0.e0
+              Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            elseif ( nn_isfcav .eq. 2 ) then 
+              Bathymetry_isf_REG (iREG,jREG) =  (   (iREG-imax(8)-npts)     * (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)        &
+              &                                                                 + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)        &
+              &                                                                 + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)        &
+              &                                                                 + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa &
+              &                                   + (imax(8)+2*npts-iREG+1) * Bathymetry_isf_REG(iREG,jREG)                                                        ) / (npts+1)
+              isf_draft_REG (iREG,jREG) =  (   (iREG-imax(8)-npts)     * (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)        &
+              &                                                            + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)        &
+              &                                                            + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)        &
+              &                                                            + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa &
+              &                              + (imax(8)+2*npts-iREG+1) * isf_draft_REG(iREG,jREG)                                                        ) / (npts+1)
+            endif
           else
             Bathymetry_REG (iREG,jREG) = 0.e0
-          endif
-          if ( ln_isfcav) then
-            isf_draft_REG      (iREG,jREG) = 0.e0
-            Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            if ( nn_isfcav .ge. 1 ) then
+              isf_draft_REG      (iREG,jREG) = 0.e0
+              Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            endif
           endif
       enddo
     enddo
@@ -649,17 +835,32 @@ if ( TRIM(config) == 'WED12' ) then
       do iREG=imin(8),imax(8)
           aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
           if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
-            Bathymetry_REG (iREG,jREG) =  (   (jmin(8)-npts-jREG)     * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)                   &
-            &                                                             + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)                   &
-            &                                                             + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)                   &
-            &                                                             + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa            &
-            &                               + (jREG-jmin(8)+2*npts+1) * Bathymetry_REG(iREG,jREG)                                                            ) / (npts+1)  
+            Bathymetry_REG (iREG,jREG) =  (   (jREG-jmin(8)+2*npts+1) * (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)        &
+            &                                                             + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)        &
+            &                                                             + Bathymetry_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)        &
+            &                                                             + Bathymetry_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa &
+            &                               + (jmin(8)-npts-jREG)     * Bathymetry_REG(iREG,jREG)                                                        ) / (npts+1)  
+            if ( nn_isfcav .eq. 1 ) then
+              isf_draft_REG      (iREG,jREG) = 0.e0
+              Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            elseif ( nn_isfcav .eq. 2 ) then
+              Bathymetry_isf_REG (iREG,jREG) =  (   (jREG-jmin(8)+2*npts+1) * (   Bathymetry_isf_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)        &
+              &                                                                 + Bathymetry_isf_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)        &
+              &                                                                 + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)        &
+              &                                                                 + Bathymetry_isf_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa &
+              &                                   + (jmin(8)-npts-jREG)     * Bathymetry_isf_REG(iREG,jREG)                                                        ) / (npts+1)  
+              isf_draft_REG (iREG,jREG) =  (   (jREG-jmin(8)+2*npts+1) * (   isf_draft_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)        &
+              &                                                            + isf_draft_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)        &
+              &                                                            + isf_draft_BDY( ziEt(iREG,jREG), zjNt(iREG,jREG) ) * wgNEt(iREG,jREG)        &
+              &                                                            + isf_draft_BDY( ziEt(iREG,jREG), zjSt(iREG,jREG) ) * wgSEt(iREG,jREG) ) / aa &
+              &                              + (jmin(8)-npts-jREG)     * isf_draft_REG(iREG,jREG)                                                        ) / (npts+1)  
+            endif
           else
             Bathymetry_REG (iREG,jREG) = 0.e0
-          endif
-          if ( ln_isfcav) then
-            isf_draft_REG      (iREG,jREG) = 0.e0
-            Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            if ( nn_isfcav .ge. 1 ) then
+              isf_draft_REG      (iREG,jREG) = 0.e0
+              Bathymetry_isf_REG (iREG,jREG) = Bathymetry_REG (iREG,jREG)
+            endif
           endif
       enddo
     enddo
@@ -686,7 +887,7 @@ status = NF90_DEF_DIM(fidM,"x",mx_REG,dimID_x); call erreur(status,.TRUE.,"def_d
 
 status = NF90_DEF_VAR(fidM,"nav_lat",NF90_FLOAT,(/dimID_x,dimID_y/),nav_lat_ID); call erreur(status,.TRUE.,"def_var_nav_lat_ID")
 status = NF90_DEF_VAR(fidM,"nav_lon",NF90_FLOAT,(/dimID_x,dimID_y/),nav_lon_ID); call erreur(status,.TRUE.,"def_var_nav_lon_ID")
-if ( ln_isfcav) then
+if ( nn_isfcav .ge. 1 ) then
   status = NF90_DEF_VAR(fidM,"isf_draft",NF90_FLOAT,(/dimID_x,dimID_y/),isf_draft_ID); call erreur(status,.TRUE.,"def_var_isf_draft_ID")
   status = NF90_DEF_VAR(fidM,"Bathymetry_isf",NF90_FLOAT,(/dimID_x,dimID_y/),Bathymetry_isf_ID); call erreur(status,.TRUE.,"def_var_Bathymetry_isf_ID")
 endif
@@ -704,7 +905,7 @@ status = NF90_PUT_ATT(fidM,nav_lon_ID,"longname","Longitude")
 call erreur(status,.TRUE.,"put_att_nav_lon_ID")
 status = NF90_PUT_ATT(fidM,nav_lon_ID,"standard_name","longitude")
 call erreur(status,.TRUE.,"put_att_nav_lon_ID")
-if ( ln_isfcav) then
+if ( nn_isfcav .ge. 1 ) then
   status = NF90_PUT_ATT(fidM,isf_draft_ID,"long_name","ice-shelf draft")
   call erreur(status,.TRUE.,"put_att_isf_draft_ID")
   status = NF90_PUT_ATT(fidM,isf_draft_ID,"units","m")
@@ -726,9 +927,8 @@ status = NF90_PUT_ATT(fidM,Bathymetry_ID,"coordinates","nav_lat nav_lon")
 call erreur(status,.TRUE.,"put_att_Bathymetry_ID")
 
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"history","Created using extract_bathy_rtopo.f90")
-status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO")
+status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
 call erreur(status,.TRUE.,"put_att_GLOBAL1")
-status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"domain",TRIM(aaa))             ; call erreur(status,.TRUE.,"put_att_GLOBAL2")
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"imin_extraction",imin_ORCA12)  ; call erreur(status,.TRUE.,"put_att_GLOBAL3")
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"imax_extraction",imax_ORCA12)  ; call erreur(status,.TRUE.,"put_att_GLOBAL4")
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"jmin_extraction",jmin_ORCA12)  ; call erreur(status,.TRUE.,"put_att_GLOBAL5")
@@ -738,7 +938,7 @@ status = NF90_ENDDEF(fidM); call erreur(status,.TRUE.,"end_definition")
 
 status = NF90_PUT_VAR(fidM,nav_lat_ID,gphit_REG); call erreur(status,.TRUE.,"var_nav_lat_ID")
 status = NF90_PUT_VAR(fidM,nav_lon_ID,glamt_REG); call erreur(status,.TRUE.,"var_nav_lon_ID")
-if ( ln_isfcav) then
+if ( nn_isfcav .eq. 2 ) then
   status = NF90_PUT_VAR(fidM,isf_draft_ID,isf_draft_REG);           call erreur(status,.TRUE.,"var_isf_draft_ID")
   status = NF90_PUT_VAR(fidM,Bathymetry_isf_ID,Bathymetry_isf_REG); call erreur(status,.TRUE.,"var_Bathymetry_isf_ID")
 endif

@@ -36,12 +36,12 @@ INTEGER :: fidORCA12, fidBDY, fidM, status, dimID_y, dimID_x, nav_lat_ID, nav_lo
 &          my_ORCA12, mx_ORCA12,  my_BDY, mx_BDY,  my_REG, mx_REG, imin_ORCA12, imax_ORCA12, jmin_ORCA12, jmax_ORCA12,                    &
 &          ai, aj, bi, bj, iREG, jREG, jtmp, npts, kk, ki, kj, ni1, ni2, nj1, nj2, pi, pj, kiref, kjref, mx_tmp, my_tmp, e2f_ID, e2v_ID,  &
 &          e2u_ID, e2t_ID, e1f_ID, e1v_ID, e1u_ID, e1t_ID, gphif_ID, gphiv_ID, gphiu_ID, gphit_ID, glamf_ID, glamv_ID, glamu_ID, glamt_ID,&
-&          fidCOORDreg, fidCOORDpar, i0, j0, Bathymetry_isf_ID, isf_draft_ID 
+&          fidCOORDreg, fidCOORDpar, i0, j0 
 
-CHARACTER(LEN=150) :: aaa, file_bathy_out, file_in_coord_REG
+CHARACTER(LEN=150) :: file_bathy_out, file_in_coord_REG
 
 REAL(KIND=4),ALLOCATABLE,DIMENSION(:,:) :: nav_lat_GLO, nav_lon_GLO, isf_draft_GLO, Bathymetry_isf_GLO, Bathymetry_GLO,     &
-&                                          nav_lat_BDY, nav_lon_BDY, Bathymetry_BDY, Bathymetry_isf_BDY, isf_draft_BDY,     &
+&                                          Bathymetry_BDY, Bathymetry_isf_BDY, isf_draft_BDY,     &
 &                                          nav_lat_REG, nav_lon_REG, isf_draft_REG, Bathymetry_isf_REG, Bathymetry_REG
 
 REAL(KIND=8),ALLOCATABLE,DIMENSION(:,:) :: e2f, e2v, e2u, e2t, e1f, e1v, e1u, e1t, gphif, gphiv, gphiu, gphit, glamf, glamv, glamu, glamt, &
@@ -165,21 +165,11 @@ status = NF90_INQUIRE_DIMENSION(fidBDY,dimID_y,len=my_BDY); call erreur(status,.
 status = NF90_INQUIRE_DIMENSION(fidBDY,dimID_x,len=mx_BDY); call erreur(status,.TRUE.,"inq_dim_x_BDY")
 
 ALLOCATE(  Bathymetry_BDY (mx_BDY,my_BDY)  ) 
-ALLOCATE(  nav_lat_BDY    (mx_BDY,my_BDY)  ) 
-ALLOCATE(  nav_lon_BDY    (mx_BDY,my_BDY)  ) 
 if ( nn_isfcav .eq. 2 ) then
   ALLOCATE(  Bathymetry_isf_BDY (mx_BDY,my_BDY)  )
   ALLOCATE(  isf_draft_BDY (mx_BDY,my_BDY)  )
 endif
 
-status = NF90_INQ_VARID(fidBDY,"nav_lat",nav_lat_ID)
-if ( status .ne. 0 ) status = NF90_INQ_VARID(fidBDY,"lat",nav_lat_ID)
-if ( status .ne. 0 ) status = NF90_INQ_VARID(fidBDY,"latitude",nav_lat_ID)
-call erreur(status,.TRUE.,"inq_nav_lat_ID_BDY")
-status = NF90_INQ_VARID(fidBDY,"nav_lon",nav_lon_ID)
-if ( status .ne. 0 ) status = NF90_INQ_VARID(fidBDY,"lon",nav_lon_ID)
-if ( status .ne. 0 ) status = NF90_INQ_VARID(fidBDY,"longitude",nav_lon_ID)
-call erreur(status,.TRUE.,"inq_nav_lon_ID_BDY")
 status = NF90_INQ_VARID(fidBDY,"Bathymetry",Bathymetry_ID)
 call erreur(status,.TRUE.,"inq_Bathymetry_ID_BDY")
 if ( nn_isfcav .eq. 2 ) then
@@ -189,8 +179,6 @@ if ( nn_isfcav .eq. 2 ) then
   call erreur(status,.TRUE.,"inq_isf_draft_ID_BDY")
 endif
 
-status = NF90_GET_VAR(fidBDY,nav_lat_ID,nav_lat_BDY);               call erreur(status,.TRUE.,"getvar_nav_lat_BDY")
-status = NF90_GET_VAR(fidBDY,nav_lon_ID,nav_lon_BDY);               call erreur(status,.TRUE.,"getvar_nav_lon_BDY")
 status = NF90_GET_VAR(fidBDY,Bathymetry_ID,Bathymetry_BDY);         call erreur(status,.TRUE.,"getvar_Bathymetry_BDY")
 if ( nn_isfcav .eq. 2 ) then
   status = NF90_GET_VAR(fidBDY,Bathymetry_isf_ID,Bathymetry_isf_BDY); call erreur(status,.TRUE.,"getvar_Bathymetry_isf_BDY")
@@ -300,6 +288,7 @@ do jREG=1,my_REG
     enddo
 
     !-- Western BDY :
+    aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
     do iREG=mx_REG-npts+1,mx_REG
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
         Bathymetry_REG (iREG,jREG) =  (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
@@ -334,6 +323,7 @@ do iREG=npts+1,mx_REG-npts
 
     !- Southern BDY :
     do jREG=1,npts
+      aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
         Bathymetry_REG (iREG,jREG) =  (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
@@ -363,6 +353,7 @@ do iREG=npts+1,mx_REG-npts
 
     !- Northern BDY :
     do jREG=my_REG-npts+1,my_REG
+      aa = wgNWt(iREG,jREG) + wgSWt(iREG,jREG) + wgNEt(iREG,jREG) + wgSEt(iREG,jREG)
       if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
         Bathymetry_REG (iREG,jREG) =  (   Bathymetry_BDY( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)   &
         &                               + Bathymetry_BDY( ziWt(iREG,jREG), zjSt(iREG,jREG) ) * wgSWt(iREG,jREG)   &
@@ -773,9 +764,8 @@ status = NF90_PUT_ATT(fidM,Bathymetry_ID,"coordinates","nav_lat nav_lon")
 call erreur(status,.TRUE.,"put_att_Bathymetry_ID")
 
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"history","Created using extract_bathy.f90")
-status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO")
+status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
 call erreur(status,.TRUE.,"put_att_GLOBAL1")
-status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"domain",TRIM(aaa))             ; call erreur(status,.TRUE.,"put_att_GLOBAL2")
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"imin_extraction",imin_ORCA12)  ; call erreur(status,.TRUE.,"put_att_GLOBAL3")
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"imax_extraction",imax_ORCA12)  ; call erreur(status,.TRUE.,"put_att_GLOBAL4")
 status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"jmin_extraction",jmin_ORCA12)  ; call erreur(status,.TRUE.,"put_att_GLOBAL5")
@@ -793,10 +783,6 @@ status = NF90_PUT_VAR(fidM,Bathymetry_ID,Bathymetry_REG); call erreur(status,.TR
 
 status = NF90_CLOSE(fidM)                    
 call erreur(status,.TRUE.,"final")         
-
-DEALLOCATE( nav_lat_GLO, nav_lon_GLO, isf_draft_GLO, Bathymetry_isf_GLO, Bathymetry_GLO)
-DEALLOCATE( nav_lat_BDY, nav_lon_BDY, isf_draft_BDY, Bathymetry_isf_BDY, Bathymetry_BDY)
-DEALLOCATE( nav_lat_REG, nav_lon_REG, isf_draft_REG, Bathymetry_isf_REG, Bathymetry_REG)
 
 write(*,*) '[done]'
 
