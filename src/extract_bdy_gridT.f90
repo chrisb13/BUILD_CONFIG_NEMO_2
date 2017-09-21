@@ -465,7 +465,13 @@ DO kyear=nn_yeari,nn_yearf
         status = NF90_OPEN(TRIM(file_in_gridT),0,fidT)                ; call erreur(status,.TRUE.,"read ORCA12 TS") 
         
         status = NF90_INQ_VARID(fidT,"time_counter",time_ID)          ; call erreur(status,.TRUE.,"inq_time_ID")
-        status = NF90_INQ_VARID(fidT,"votemper",votemper_ID)          ; call erreur(status,.TRUE.,"inq_votemper_ID")
+        status = NF90_INQ_VARID(fidT,"votemper",votemper_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"toce",votemper_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"thetao",votemper_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"temperature",votemper_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"TEMPERATURE",votemper_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"TEMP",votemper_ID)
+        call erreur(status,.TRUE.,"inq_votemper_ID")
         
         status = NF90_GET_VAR(fidT,time_ID,time)                      ; call erreur(status,.TRUE.,"getvar_time")
         status = NF90_GET_VAR(fidT,votemper_ID,votemper_GLO)          ; call erreur(status,.TRUE.,"getvar_votemper")
@@ -482,7 +488,12 @@ DO kyear=nn_yeari,nn_yearf
         
         status = NF90_OPEN(TRIM(file_in_gridS),0,fidS)                ; call erreur(status,.TRUE.,"read ORCA12 TS") 
         
-        status = NF90_INQ_VARID(fidS,"vosaline",vosaline_ID)          ; call erreur(status,.TRUE.,"inq_vosaline_ID")
+        status = NF90_INQ_VARID(fidS,"vosaline",vosaline_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidS,"soce",vosaline_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidS,"salinity",vosaline_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidS,"SALINITY",vosaline_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidS,"SALT",vosaline_ID)
+        call erreur(status,.TRUE.,"inq_vosaline_ID")
         
         status = NF90_GET_VAR(fidS,vosaline_ID,vosaline_GLO)          ; call erreur(status,.TRUE.,"getvar_vosaline")
 

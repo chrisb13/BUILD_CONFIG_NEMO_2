@@ -118,7 +118,7 @@ status = NF90_GET_VAR(fidMSKIN,umask_GLO_ID,umask_GLO); call erreur(status,.TRUE
 status = NF90_CLOSE(fidMSKIN); call erreur(status,.TRUE.,"end read mask_GLO")
 
 !=================================================================================
-! 1b- Read GLOBAL zgr (e3t) :                                 
+! 1b- Read GLOBAL zgr (e3u) :                                 
 !=================================================================================
 
 status = NF90_OPEN(TRIM(file_data_zgr),0,fidZGR); call erreur(status,.TRUE.,"read e3u_GLO") 
@@ -479,16 +479,25 @@ DO kyear=nn_yeari,nn_yearf
         ALLOCATE( vomecrty_GLO_U(mlon,mlat,mdepthu,mtime)  )
         ALLOCATE( time(mtime) )
         
-        !---------------------------------------
-        ! Read input velocity :
+        !----------------------------------------------------------------
+        ! Read input eastward velocity or velocity * thickness if vvl:
 
         write(*,*) 'Reading U in ', TRIM(file_in_gridU)
         
         status = NF90_OPEN(TRIM(file_in_gridU),0,fidU)                ; call erreur(status,.TRUE.,"read ORCA12 TS") 
         
         status = NF90_INQ_VARID(fidU,"time_counter",time_ID)          ; call erreur(status,.TRUE.,"inq_time_ID")
-        status = NF90_INQ_VARID(fidU,"vozocrtx",vozocrtx_ID)          ; call erreur(status,.TRUE.,"inq_vozocrtx_ID")
-        
+
+        if (      nn_vvl .eq. 0 &        ! vvl neither in the BDY conditions nor in the REG simulation
+           & .or. nn_vvl .eq. 1 ) then   ! vvl in the REG simulation but not (or not saved) in the BDY conditions
+          status = NF90_INQ_VARID(fidU,"vozocrtx",vozocrtx_ID)
+          if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"uoce",vozocrtx_ID)
+        elseif  ( nn_vvl .eq. 2 ) then   ! vvl in the REG simulation and in the BDY conditions
+          status = NF90_INQ_VARID(fidU,"uoce_e3u",vozocrtx_ID)
+          if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"e3u_uoce",vozocrtx_ID)
+        endif        
+        call erreur(status,.TRUE.,"inq_vozocrtx_ID")
+
         status = NF90_GET_VAR(fidU,time_ID,time)                      ; call erreur(status,.TRUE.,"getvar_time")
         status = NF90_GET_VAR(fidU,vozocrtx_ID,vozocrtx_GLO)          ; call erreur(status,.TRUE.,"getvar_vozocrtx")
 
@@ -497,15 +506,23 @@ DO kyear=nn_yeari,nn_yearf
         
         status = NF90_CLOSE(fidU)                                     ; call erreur(status,.TRUE.,"fin_lecture")     
 
-        !---------------------------------------
-        ! Read input velocity :
+        !-----------------------------------------------------------------
+        ! Read input northward velocity or velocity * thickness if vvl:
 
         write(*,*) 'Reading V in ', TRIM(file_in_gridV)
         
         status = NF90_OPEN(TRIM(file_in_gridV),0,fidV)                ; call erreur(status,.TRUE.,"read ORCA12 TS") 
-        
-        status = NF90_INQ_VARID(fidV,"vomecrty",vomecrty_ID)          ; call erreur(status,.TRUE.,"inq_vomecrty_ID")
-        
+      
+        if (      nn_vvl .eq. 0 &        ! vvl neither in the BDY conditions nor in the REG simulation
+           & .or. nn_vvl .eq. 1 ) then   ! vvl in the REG simulation but not (or not saved) in the BDY conditions
+          status = NF90_INQ_VARID(fidV,"vomecrty",vomecrty_ID)
+          if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"voce",vomecrty_ID)
+        elseif  ( nn_vvl .eq. 2 ) then   ! vvl in the REG simulation and in the BDY conditions
+          status = NF90_INQ_VARID(fidV,"voce_e3v",vomecrty_ID)
+          if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"e3v_voce",vomecrty_ID)
+        endif        
+        call erreur(status,.TRUE.,"inq_vomecrty_ID")
+ 
         status = NF90_GET_VAR(fidV,vomecrty_ID,vomecrty_GLO)          ; call erreur(status,.TRUE.,"getvar_vomecrty")
 
         status = NF90_CLOSE(fidV)                                     ; call erreur(status,.TRUE.,"fin_lecture")     
@@ -533,21 +550,18 @@ DO kyear=nn_yeari,nn_yearf
         !---------------------------------------
         ! Express velocities onto the other grid :
 
-        write(*,*) 'Express V on grudU'
+        write(*,*) 'Express V on gridU'
 
         do i=1,mlon
         do j=1,mlat
-
           ip1=MIN(i+1,mlon)
           im1=MAX(i-1,1)
           jp1=MIN(j+1,mlat)
           jm1=MAX(j-1,1)
-
           vomecrty_GLO_U(i,j,:,:) = (   vomecrty_GLO(i  ,j  ,:,:) * e1v_GLO(i  ,j  ) &
           &                           + vomecrty_GLO(ip1,j  ,:,:) * e1v_GLO(ip1,j  ) &
           &                           + vomecrty_GLO(i  ,jm1,:,:) * e1v_GLO(i  ,jm1) &
           &                           + vomecrty_GLO(ip1,jm1,:,:) * e1v_GLO(ip1,jm1) ) / (4*e1u_GLO(i,j))
-
         enddo
         enddo
 

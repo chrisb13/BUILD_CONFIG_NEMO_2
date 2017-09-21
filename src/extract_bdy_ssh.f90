@@ -426,7 +426,9 @@ DO kyear=nn_yeari,nn_yearf
         status = NF90_OPEN(TRIM(file_in_SSH),0,fidT)                ; call erreur(status,.TRUE.,"read ORCA12 TS") 
         
         status = NF90_INQ_VARID(fidT,"time_counter",time_ID)          ; call erreur(status,.TRUE.,"inq_time_ID")
-        status = NF90_INQ_VARID(fidT,"sossheig",sossheig_ID)          ; call erreur(status,.TRUE.,"inq_sossheig_ID")
+        status = NF90_INQ_VARID(fidT,"sossheig",sossheig_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"ssh",sossheig_ID)
+        call erreur(status,.TRUE.,"inq_sossheig_ID")
         
         status = NF90_GET_VAR(fidT,time_ID,time)                      ; call erreur(status,.TRUE.,"getvar_time")
         status = NF90_GET_VAR(fidT,sossheig_ID,sossheig_GLO)          ; call erreur(status,.TRUE.,"getvar_sossheig")

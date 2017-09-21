@@ -44,6 +44,8 @@ List of contributors:
 #########################################################################################################
 ## 1-- Get and install NEMO and XIOS (required for the preprocessing to build the mesh_mask file)
 
+        ## About NEMO/XIOS download and compilation: http://forge.ipsl.jussieu.fr/nemo/wiki/Users
+
         ## NB: on froggy (Ciment, Grenoble), you will need to run this command to enable svn functions:
         export ftp_proxy=http://www-cache.ujf-grenoble.fr:3128
 

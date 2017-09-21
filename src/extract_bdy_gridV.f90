@@ -118,7 +118,7 @@ status = NF90_GET_VAR(fidMSKIN,vmask_GLO_ID,vmask_GLO); call erreur(status,.TRUE
 status = NF90_CLOSE(fidMSKIN); call erreur(status,.TRUE.,"end read mask_GLO")
 
 !=================================================================================
-! 1b- Read GLOBAL zgr (e3t) :                                 
+! 1b- Read GLOBAL zgr (e3v) :                                 
 !=================================================================================
 
 status = NF90_OPEN(TRIM(file_data_zgr),0,fidZGR); call erreur(status,.TRUE.,"read e3v_GLO") 
@@ -487,8 +487,10 @@ DO kyear=nn_yeari,nn_yearf
         status = NF90_OPEN(TRIM(file_in_gridU),0,fidU)                ; call erreur(status,.TRUE.,"read ORCA12 TS") 
         
         status = NF90_INQ_VARID(fidU,"time_counter",time_ID)          ; call erreur(status,.TRUE.,"inq_time_ID")
-        status = NF90_INQ_VARID(fidU,"vozocrtx",vozocrtx_ID)          ; call erreur(status,.TRUE.,"inq_vozocrtx_ID")
-        
+        status = NF90_INQ_VARID(fidU,"vozocrtx",vozocrtx_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"uoce",vozocrtx_ID)
+        call erreur(status,.TRUE.,"inq_vozocrtx_ID")        
+
         status = NF90_GET_VAR(fidU,time_ID,time)                      ; call erreur(status,.TRUE.,"getvar_time")
         status = NF90_GET_VAR(fidU,vozocrtx_ID,vozocrtx_GLO)          ; call erreur(status,.TRUE.,"getvar_vozocrtx")
 
@@ -504,7 +506,9 @@ DO kyear=nn_yeari,nn_yearf
         
         status = NF90_OPEN(TRIM(file_in_gridV),0,fidV)                ; call erreur(status,.TRUE.,"read ORCA12 TS") 
         
-        status = NF90_INQ_VARID(fidV,"vomecrty",vomecrty_ID)          ; call erreur(status,.TRUE.,"inq_vomecrty_ID")
+        status = NF90_INQ_VARID(fidV,"vomecrty",vomecrty_ID)
+        if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"voce",vomecrty_ID)
+        call erreur(status,.TRUE.,"inq_vomecrty_ID")
         
         status = NF90_GET_VAR(fidV,vomecrty_ID,vomecrty_GLO)          ; call erreur(status,.TRUE.,"getvar_vomecrty")
 
@@ -533,7 +537,7 @@ DO kyear=nn_yeari,nn_yearf
         !---------------------------------------
         ! Express velocities onto the other grid :
 
-        write(*,*) 'Express V on grudU'
+        write(*,*) 'Express U on gridV'
 
         do i=1,mlon
         do j=1,mlat
