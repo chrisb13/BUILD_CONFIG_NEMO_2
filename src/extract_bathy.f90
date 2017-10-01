@@ -9,11 +9,13 @@ program modif
 ! dataset used as lateral boundary conditions.
 !
 ! 0- Initializations 
-! 1- Read coarse bathymetry used for consistent bathymetry along boundaries
+! 1a- Read grid correspondance with GLO (i.e. extraction coordinates)
+! 1b- Read bathymetry in which to extract (e.g. eORCA12)
+! 1c- Read coarse bathymetry used for consistent bathymetry along boundaries
 ! 2- READ INTERPOLATION COEFFICIENTS FOR REGIONAL CONFIGURATION
-! 3- Extract variables on the REG grid :
-! 4- Manual corrections for WED12 :
-! 5- Writing new REG bathymetry file :
+! 3- Extract variables on the REG grid
+! 4- Manual corrections for specific REGIONAL domains
+! 5- Writing new REG bathymetry file
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -151,7 +153,7 @@ status = NF90_CLOSE(fidORCA12); call erreur(status,.TRUE.,"close_grid_to_extract
 
 
 !=================================================================================
-! 1- Read coarse bathymetry used for consistent bathymetry along boundaries
+! 1c- Read coarse bathymetry used for consistent bathymetry along boundaries
 !=================================================================================
 
 write(*,*) 'Reading coarse bathymetry for consistent boundaries: ', TRIM(file_in_bathy_bdy)
@@ -527,7 +529,7 @@ do iREG=2*npts+1,mx_REG-2*npts
 enddo
    
 !=================================================================================
-! 4- Manual corrections for WED12 :
+! 4- Manual corrections for specific REGIONAL domains :
 !=================================================================================
 
 if ( TRIM(config) == 'WED12' ) then

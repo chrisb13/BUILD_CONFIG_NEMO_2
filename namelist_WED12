@@ -22,12 +22,12 @@ file_in_coord_bdy     = '/store/njourd/ORCA025/SOUTHG2V3_ORCA025.L75-MJM91_mesh_
                                                                                          ! lateral boundary conditions (e.g. ORCA025).
 nn_isfcav             = 1                                                   ! = 0 if the regional domain DOES NOT include ice shelves.
                                                                             ! = 1 if the regional domain includes ice shelves but not
-                                                                                  the simulation used as lateral boundary.
+                                                                            !     the simulation used as lateral boundary.
                                                                             ! = 2 if both the regional domain and the simulation used as
-                                                                                  lateral boundaries include ice shelves.
-ln_dateline           = .false.                                             ! .true. if the domain includes the dateline
-                                                                            ! .false if the domain includes the Greenwich Meridian
-nn_perio              = 0                                                   ! = 1 if the domain is periodic, =0 otherwise. 
+                                                                            !     lateral boundaries include ice shelves (not tested).
+ln_dateline           = .false.                                             ! .true. if the domain includes the dateline (not tested),
+                                                                            ! .false if the domain includes the Greenwich Meridian.
+nn_perio              = 0                                                   ! = 1 if the domain is periodic (not tested), =0 otherwise. 
 !
 ! Choose the domain bounds in the file from which we extract the regional domain (e.g. WED12 domain within eORCA12) :
 nn_imin_extract       = 2464
@@ -36,9 +36,13 @@ nn_jmin_extract       =  151
 nn_jmax_extract       = 1122
 /
 !-------------------------------------------------------------------------------------------------------------------------------
+&rtopo
+!- Only used if you use extract_bathy_rtopo.f90 instead of extract_bathy.f90
+file_rtopo_bathy      = '/store/njourd/DATA/DATA_BATHYMETRY/RTopo-2.0.1_30sec_bedrock_topography.nc'
+file_rtopo_isf_draft  = '/store/njourd/DATA/DATA_BATHYMETRY/RTopo-2.0.1_30sec_ice_base_topography.nc'
+/
+!-------------------------------------------------------------------------------------------------------------------------------
 &init
-nn_init               =    2   !  1 -> initial state is an extraction from the corresponding global/large-scale grid [ if ln_coarse_bdy = false ]
-                               !  2 -> initial state from coarser resolution [ if ln_coarse_bdy = true ]     
 file_in_mask_extract  = '/store/njourd/ORCA025/SOUTHG2V3_ORCA025.L75-MJM91_byte_mask.nc' ! Global/large-scale file, according to nn_init 
                                                                                          ! (contains tmask, nav_lat, nav_lon, nav_lev)
 file_in_zgr_extract   = '/store/njourd/ORCA025/SOUTHG2V3_ORCA025.L75-MJM91_mesh_zgr.nc'  ! (contains e3t)
@@ -94,24 +98,16 @@ jj_bdy_south(1)       =    0    ! j-index for southern boundary (ocean T-pt, sta
 &bdy_data
 ! Dataset used as lateral boundary conditions (same grid as file_in_mask_extract and as file_in_bathy_bdy if it is used)
 ! The dataset is assumed to be in files of one of the following types (YYYY is 4-digit year, MM 2-digit month and DD 2-digit day):
-!         <data_dir>/YYYY/<data_prefix>_YYYY_MM_DD_<data_suffix>.nc
-!         <data_dir>/YYYY/<data_prefix>_YYYY_MM_<data_suffix>.nc
-!         <data_dir>/YYYY/<data_prefix>_YYYY_MM_DD.nc
-!         <data_dir>/YYYY/<data_prefix>_YYYY_MM.nc
-!         <data_dir>/<data_prefix>_YYYY_MM_DD_<data_suffix>.nc
-!         <data_dir>/<data_prefix>_YYYY_MM_<data_suffix>.nc
-!         <data_dir>/<data_prefix>_YYYY_MM_DD.nc
-!         <data_dir>/<data_prefix>_YYYY_MM.nc
-!         <data_dir>/YYYY/<data_prefix>_YYYYMMDD_<data_suffix>.nc
-!         <data_dir>/YYYY/<data_prefix>_YYYYMM_<data_suffix>.nc
-!         <data_dir>/YYYY/<data_prefix>_YYYYMMDD.nc
-!         <data_dir>/YYYY/<data_prefix>_YYYYMM.nc
-!         <data_dir>/<data_prefix>_YYYYMMDD_<data_suffix>.nc
-!         <data_dir>/<data_prefix>_YYYYMM_<data_suffix>.nc
-!         <data_dir>/<data_prefix>_YYYYMMDD.nc
-!         <data_dir>/<data_prefix>_YYYYMM.nc
+!
+!        <data_dir>/YYYY/<data_prefix>YYYY<sep1>MM<sep2>DD<data_suffix>.nc
+! or:    <data_dir>/YYYY/<data_prefix>YYYY<sep1>MM<data_suffix>.nc
+! or:    <data_dir>/<data_prefix>YYYY<sep1>MM<sep2>DD<data_suffix>.nc
+! or:    <data_dir>/<data_prefix>YYYY<sep1>MM<data_suffix>.nc
+!
 data_dir              = '/store/njourd/SOUTHG2V3' 
-data_prefix           = 'SOUTHG2V3'
+data_prefix           = 'SOUTHG2V3_'
+sep1                  = ''
+sep2                  = ''
 data_suffix_T         = 'gridT' ! suffix for temperature
 data_suffix_S         = 'gridS' ! suffix for salinity
 data_suffix_U         = 'gridU' ! suffix for zonal velocity
@@ -157,25 +153,17 @@ harm(18)              = 'M4  '
 &sss_resto
 ! Dataset used as lateral boundary conditions (same grid as file_in_mask_extract and as file_in_bathy_bdy if it is used)
 ! The sss dataset is assumed to be in files of one of the following types (YYYY is 4-digit year, MM 2-digit month and DD 2-digit day):
-!         <sss_dir>/YYYY/<sss_prefix>_YYYY_MM_DD_<sss_suffix>.nc
-!         <sss_dir>/YYYY/<sss_prefix>_YYYY_MM_<sss_suffix>.nc
-!         <sss_dir>/YYYY/<sss_prefix>_YYYY_MM_DD.nc
-!         <sss_dir>/YYYY/<sss_prefix>_YYYY_MM.nc
-!         <sss_dir>/<sss_prefix>_YYYY_MM_DD_<sss_suffix>.nc
-!         <sss_dir>/<sss_prefix>_YYYY_MM_<sss_suffix>.nc
-!         <sss_dir>/<sss_prefix>_YYYY_MM_DD.nc
-!         <sss_dir>/<sss_prefix>_YYYY_MM.nc
-!         <sss_dir>/YYYY/<sss_prefix>_YYYYMMDD_<sss_suffix>.nc
-!         <sss_dir>/YYYY/<sss_prefix>_YYYYMM_<sss_suffix>.nc
-!         <sss_dir>/YYYY/<sss_prefix>_YYYYMMDD.nc
-!         <sss_dir>/YYYY/<sss_prefix>_YYYYMM.nc
-!         <sss_dir>/<sss_prefix>_YYYYMMDD_<sss_suffix>.nc
-!         <sss_dir>/<sss_prefix>_YYYYMM_<sss_suffix>.nc
-!         <sss_dir>/<sss_prefix>_YYYYMMDD.nc
-!         <sss_dir>/<sss_prefix>_YYYYMM.nc
+!
+!        <sss_dir>/YYYY/<sss_prefix>YYYY<sss_sep1>MM<sss_sep2>DD<sss_suffix>.nc
+! or:    <sss_dir>/YYYY/<sss_prefix>YYYY<sss_sep1>MM<sss_suffix>.nc
+! or:    <sss_dir>/<sss_prefix>YYYY<sss_sep1>MM<sss_sep2>DD<sss_suffix>.nc
+! or:    <sss_dir>/<sss_prefix>YYYY<sss_sep1>MM<sss_suffix>.nc
+!
 sss_dir              = '/store/njourd/SOUTHG2V3'
-sss_prefix           = 'SOUTHG2V3'
-sss_suffix           = 'gridS'
+sss_prefix           = 'SOUTHG2V3_'
+sss_suffix           = '_gridS'
+sss_sep1             = ''
+sss_sep2             = ''
 nn_sss_yeari         = 1993    ! First year to proceed
 nn_sss_yearf         = 2013    ! Last year to proceed
 nn_sss_eosmatch      = 0       ! match between model equ. of state and SSS restoring file :

@@ -1,4 +1,4 @@
-program buildobc
+program buildweight
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! by N. Jourdain, on 23-MAY-2013, at CCRC-UNSW, Sydney                    !
@@ -6,14 +6,12 @@ program buildobc
 ! build coefficients to inpterpole a global simulation on a regional grid !
 ! (needed to build the initial state of regional config)                  !
 !                                                                         !
-! 0- USER'S CHOOICES                                                      !
-! 1- READ INPUT GRID (i.e. from global ocean model)                       !
-! 2- READ OUTPUT GRID (i.e. grid of the regional oceanic configuration)   !
-! 3- CALCULATE WEIGHTS FOR INTERPOLATION (surrounding pts + weights)      !
+! 0- Initializations                                                      !
+! 2- Read the grid coordinates for the REGIONAL domain                    !
+! 3- CALCULATE WEIGHTS TO INTERPOLATE GLOBAL FILEDS ONTO THE REGIONAL GRID!
 ! 4- WRITE EVERYTHING NEEDED FOR INTERPOLATION IN A NETCDF FILE           !
 !                                                                         !
-! > creates one netcdf file with coeff for interp                         !
-!   e.g. coeff_istate_XXXX_from_ORCA025_L75.nc                            !
+! hisotry: - Jul. 2017: adaptation to BUILD_CONFIG_NEMO_2                 !
 !                                                                         !
 ! WARNING : for the moment, only work :                                   !
 !           - if the vertical grid in global input domain is the same as  !
@@ -321,7 +319,7 @@ enddo
 !===============
 
 !=========================================================================================
-! 3- CALCULATE WEIGHTS FOR OBC FILES 
+! 3- CALCULATE WEIGHTS TO INTERPOLATE GLOBAL FILEDS ONTO THE REGIONAL GRID 
 !    (and find what are the 4 global T-points surrounding a T-point of the boundary)
 !=========================================================================================
 
@@ -932,7 +930,9 @@ status = NF90_DEF_VAR(fidcoeff,"wgSWv", NF90_FLOAT,(/dimID_x,dimID_y/),wgSWv_ID)
 status = NF90_DEF_VAR(fidcoeff,"wgNWv", NF90_FLOAT,(/dimID_x,dimID_y/),wgNWv_ID) ; call erreur(status,.TRUE.,"def_var_wgNWv_ID")
 
 !-- Global attribute
-status = NF90_PUT_ATT(fidcoeff,NF90_GLOBAL,"history","built using build_linear_interp_weights.f90") ; call erreur(status,.TRUE.,"att_global")
+status = NF90_PUT_ATT(fidcoeff,NF90_GLOBAL,"history","built using build_linear_interp_weights.f90")
+status = NF90_PUT_ATT(fidcoeff,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
+call erreur(status,.TRUE.,"att_global")
 
 !-- End of definitions
 status = NF90_ENDDEF(fidcoeff) ; call erreur(status,.TRUE.,"end_definition") 
@@ -995,8 +995,7 @@ status = NF90_PUT_VAR(fidcoeff,angleYv_ID,angleYv)   ; call erreur(status,.TRUE.
 !-- End of writing                           
 status = NF90_CLOSE(fidcoeff) ; call erreur(status,.TRUE.,"end_writing_weights")
 
-
-end program buildobc
+end program buildweight
 
 
 !==================================================================================

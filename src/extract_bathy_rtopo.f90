@@ -9,11 +9,12 @@ program modif
 ! dataset used as lateral boundary conditions.
 !
 ! 0- Initializations 
-! 1- Read coarse bathymetry used for consistent bathymetry along boundaries
-! 2- READ INTERPOLATION COEFFICIENTS FOR REGIONAL CONFIGURATION
-! 3- Extract variables on the REG grid :
-! 4- Manual corrections for WED12 :
-! 5- Writing new REG bathymetry file :
+! 1- Read RTopo bathymetry and ice shelf draft
+! 2- Read grid correspondance with GLO (i.e. extraction coordinates)
+! 3- Read coarse bathymetry used for consistent bathymetry along boundaries
+! 4- READ INTERPOLATION COEFFICIENTS FOR REGIONAL CONFIGURATION
+! 5- Calculate bathy/isf draft on the REG grid
+! 6- Writing new REG bathymetry file
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -222,6 +223,9 @@ jmin_RTOPO = MINLOC( tmp3(:), 1 ) - 1
 jmax_RTOPO = MINLOC( tmp4(:), 1 ) + 1
 DEALLOCATE( lon_RTOPO, tmp1, tmp2, tmp3, tmp4 )
 
+write(*,527) imin_RTOPO, imax_RTOPO, jmin_RTOPO, jmax_RTOPO
+527 FORMAT('Restricting search on RTOPO to i=',i5,':',i5,' and j=',i5,':',i5)
+
 !=================================================================================
 ! 3- Read coarse bathymetry used for consistent bathymetry along boundaries
 !=================================================================================
@@ -323,7 +327,8 @@ ALLOCATE(  nn                 (mx_REG,my_REG)  )
 ALLOCATE(  isf_draft_REG      (mx_REG,my_REG)  )
 ALLOCATE(  Bathymetry_isf_REG (mx_REG,my_REG)  )
 ALLOCATE(  Bathymetry_REG     (mx_REG,my_REG)  )
-   
+  
+nn(:,:) = 0 
 Bathymetry_isf_REG (:,:) = 0.e0
 isf_draft_REG      (:,:) = 0.e0
 Bathymetry_REG     (:,:) = 0.e0
@@ -875,7 +880,7 @@ if ( TRIM(config) == 'WED12' ) then
 endif
 
 !=================================================================================
-! 5- Writing new REG bathymetry file :
+! 6- Writing new REG bathymetry file :
 !=================================================================================
 
 write(*,*) 'Creating ', TRIM(file_bathy_out)

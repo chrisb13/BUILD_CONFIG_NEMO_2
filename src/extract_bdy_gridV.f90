@@ -2,12 +2,23 @@ program modif
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! N. Jourdain, LGGE-CNRS, March 2015
 !
-! Used to build netcdf coordinate file for BDY
+! Used to derive baroclinic velocities (V) along the BDY
 !
 ! 0- Initialiartions
-! 1- Read information on grids
-! 2- Read input file dimensions in first existing file for specified time window
-! 3- Process all gridU files over specified period
+! 1a- Read GLOBAL mask
+! 1b- Read GLOBAL zgr (e3v)
+! 1c- Read GLOBAL hgr
+! 1d- Read BDY coordinates
+! 2- Read REGIONAL mask
+! 3- READ INTERPOLATION COEFFICIENTS FOR REGIONAL CONFIGURATION
+! 4- Read input file dimensions in first existing file for specified time window
+! 5- Process all gridV files over specified period
+! 5a- Read input velocity
+! 5b- Read input velocity
+! 5c- Remove possible NaNs
+! 5d- Express velocities onto the other grid
+! 5e- Fill values on bdyV
+! 5f- Write BDY netcdf file for baroclinic velocity
 !
 ! history : - Feb. 2017: version with namelist (N. Jourdain)
 !
@@ -18,11 +29,11 @@ IMPLICIT NONE
 
 !-- namelist parameters :
 namelist /general/ config, config_dir
-namelist /bdy_data/ nn_yeari, nn_yearf, data_dir, data_prefix, nn_bdy_eosmatch, &
-&                   data_suffix_T, data_suffix_S, data_suffix_U, data_suffix_V, &
-&                   data_suffix_ssh, data_suffix_bsf, data_suffix_ice,          &
+namelist /bdy_data/ nn_yeari, nn_yearf, data_dir, data_prefix, nn_bdy_eosmatch,    &
+&                   data_suffix_T, data_suffix_S, data_suffix_U, data_suffix_V,    &
+&                   data_suffix_ssh, data_suffix_bsf, data_suffix_ice, sep1, sep2, &
 &                   file_data_mask, file_data_zgr, file_data_hgr
-CHARACTER(LEN=50)                    :: config
+CHARACTER(LEN=50)                    :: config, sep1, sep2
 CHARACTER(LEN=150)                   :: config_dir, data_dir, data_prefix, data_suffix_U, data_suffix_V, &
 &                                       data_suffix_T, data_suffix_S, data_suffix_ssh, data_suffix_ice,  &
 &                                       data_suffix_bsf, file_data_mask, file_data_zgr, file_data_hgr
@@ -40,7 +51,7 @@ INTEGER                              :: fidCOORD, status, dimID_yb, dimID_xbv, m
 &                                       mz_REG, fidMSKREG, dimID_z, mx_GLO, my_GLO, mz_GLO, fidHGR,  &
 &                                       e3v_REG_ID, e2u_GLO_ID, e2v_GLO_ID, im1, ip1, jm1, jp1
 CHARACTER(LEN=100)                   :: calendar, time_units
-CHARACTER(LEN=150)                   :: file_coord, file_in_gridU, file_bdy_gridV, file_bdy_gridV2d, &
+CHARACTER(LEN=150)                   :: file_coord, file_in_gridU, file_bdy_gridV,                   &
 &                                       file_in_coord_REG, file_in_gridV, command_str,               &
 &                                       file_bdy_gridV3d, file_in_mask_REG
 INTEGER*1,ALLOCATABLE,DIMENSION(:,:,:) :: vmask_GLO, vmask_REG
@@ -63,7 +74,7 @@ REAL*4,ALLOCATABLE,DIMENSION(:,:)      :: wgNEv, wgNWv, wgSWv, wgSEv
 REAL*8                                 :: eps, aa, aSW, aNW, aSE, aNE, uu, vv, tmpdep, tmpbtp
 
 !=================================================================================
-!- 0- Initialiartions
+! 0- Initialiartions
 !=================================================================================
 
 write(*,*) 'Reading namelist parameters'
@@ -261,115 +272,80 @@ status = NF90_CLOSE(fidcoeff) ; call erreur(status,.TRUE.,"fin_lecture")
 !=================================================================================
 
 !- accepted input format :
-191 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,'_',i2.2,'_',i2.2,'_',a,'.nc')  ! <data_dir>/YYYY/<data_prefix>_YYYY_MM_DD_<data_suffix_U>.nc
-192 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,'_',i2.2,'_',a,'.nc')           ! <data_dir>/YYYY/<data_prefix>_YYYY_MM_<data_suffix_U>.nc
-193 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,'_',i2.2,'_',i2.2,'.nc')        ! <data_dir>/YYYY/<data_prefix>_YYYY_MM_DD.nc
-194 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,'_',i2.2,'.nc')                 ! <data_dir>/YYYY/<data_prefix>_YYYY_MM.nc
-195 FORMAT(a,'/',a,'_',i4.4,'_',i2.2,'_',i2.2,'_',a,'.nc')           ! <data_dir>/<data_prefix>_YYYY_MM_DD_<data_suffix_U>.nc
-196 FORMAT(a,'/',a,'_',i4.4,'_',i2.2,'_',a,'.nc')                    ! <data_dir>/<data_prefix>_YYYY_MM_<data_suffix_U>.nc
-197 FORMAT(a,'/',a,'_',i4.4,'_',i2.2,'_',i2.2,'.nc')                 ! <data_dir>/<data_prefix>_YYYY_MM_DD.nc
-198 FORMAT(a,'/',a,'_',i4.4,'_',i2.2,'.nc')                          ! <data_dir>/<data_prefix>_YYYY_MM.nc
-291 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,i2.2,i2.2,'_',a,'.nc')          ! <data_dir>/YYYY/<data_prefix>_YYYYMMDD_<data_suffix_U>.nc
-292 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,i2.2,'_',a,'.nc')               ! <data_dir>/YYYY/<data_prefix>_YYYYMM_<data_suffix_U>.nc
-293 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,i2.2,i2.2,'.nc')                ! <data_dir>/YYYY/<data_prefix>_YYYYMMDD.nc
-294 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,i2.2,'.nc')                     ! <data_dir>/YYYY/<data_prefix>_YYYYMM.nc
-295 FORMAT(a,'/',a,'_',i4.4,i2.2,i2.2,'_',a,'.nc')                   ! <data_dir>/<data_prefix>_YYYYMMDD_<data_suffix_U>.nc
-296 FORMAT(a,'/',a,'_',i4.4,i2.2,'_',a,'.nc')                        ! <data_dir>/<data_prefix>_YYYYMM_<data_suffix_U>.nc
-297 FORMAT(a,'/',a,'_',i4.4,i2.2,i2.2,'.nc')                         ! <data_dir>/<data_prefix>_YYYYMMDD.nc
-298 FORMAT(a,'/',a,'_',i4.4,i2.2,'.nc')                              ! <data_dir>/<data_prefix>_YYYYMM.nc
+191 FORMAT(a,'/',i4.4,'/',a,i4.4,a,i2.2,a,i2.2,a,'.nc')  ! <data_dir>/YYYY/<data_prefix>YYYY<sep1>MM<sep2>DD<data_suffix>.nc  
+192 FORMAT(a,'/',i4.4,'/',a,i4.4,a,i2.2,a,'.nc')         ! <data_dir>/YYYY/<data_prefix>YYYY<sep1>MM<data_suffix>.nc  
+193 FORMAT(a,'/',a,i4.4,a,i2.2,a,i2.2,a,'.nc')           ! <data_dir>/<data_prefix>YYYY<sep1>MM<sep2>DD<data_suffix>.nc  
+194 FORMAT(a,'/',a,i4.4,a,i2.2,a,'.nc')                  ! <data_dir>/<data_prefix>YYYY<sep1>MM<data_suffix>.nc 
+
+ALLOCATE(list_fmt(4))
+list_fmt=(/191,192,193,194/)
 
 kyear=nn_yeari
 kmonth=1
 DO kday=1,31
 
-  ALLOCATE(list_fmt(16))
-  list_fmt=(/191,192,193,194,195,196,197,198,291,292,293,294,295,296,297,298/)
-
   do kfmt=1,size(list_fmt)
      nfmt=list_fmt(kfmt)
      SELECT CASE(nfmt)
         CASE(191)
-          write(file_in_gridU,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_U)
+          write(file_in_gridV,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_V)
         CASE(192)
-          write(file_in_gridU,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_U) 
+          write(file_in_gridV,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_V) 
         CASE(193)
-          write(file_in_gridU,193) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-        CASE(194) 
-          write(file_in_gridU,194) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-        CASE(195) 
-          write(file_in_gridU,195) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_U)
-        CASE(196) 
-          write(file_in_gridU,196) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_U)
-        CASE(197) 
-          write(file_in_gridU,197) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-        CASE(198)
-          write(file_in_gridU,198) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
-        CASE(291)
-          write(file_in_gridU,291) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_U)
-        CASE(292)
-          write(file_in_gridU,292) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_U) 
-        CASE(293)
-          write(file_in_gridU,293) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-        CASE(294) 
-          write(file_in_gridU,294) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-        CASE(295) 
-          write(file_in_gridU,295) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_U)
-        CASE(296) 
-          write(file_in_gridU,296) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_U)
-        CASE(297) 
-          write(file_in_gridU,297) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-        CASE(298)
-          write(file_in_gridU,298) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
+          write(file_in_gridV,193) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_V)
+        CASE(194)
+          write(file_in_gridV,194) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_V)
         CASE DEFAULT 
           write(*,*) 'wrong nfmt value >>>>>> stop !'
           stop
      END SELECT
-     inquire(file=file_in_gridU, exist=existfile)
-     if ( existfile ) exit
+     write(*,*) 'Looking for existence of ', TRIM(file_in_gridV)
+     inquire(file=file_in_gridV, exist=existfile)
+     if ( existfile ) then; write(*,*) 'BINGO !'; exit ; endif
   enddo !-kfmt
 
   IF ( existfile ) THEN
 
-    write(*,*) 'Reading U input dimensions in ', TRIM(file_in_gridU)
-    status = NF90_OPEN(TRIM(file_in_gridU),0,fidU)          ; call erreur(status,.TRUE.,"read first")
+    write(*,*) 'Reading V input dimensions in ', TRIM(file_in_gridV)
+    status = NF90_OPEN(TRIM(file_in_gridV),0,fidV)          ; call erreur(status,.TRUE.,"read first")
 
-    status = NF90_INQ_DIMID(fidU,"time_counter",dimID_time) ; call erreur(status,.TRUE.,"inq_dimID_time")
-    status = NF90_INQ_DIMID(fidU,"x",dimID_x)               ; call erreur(status,.TRUE.,"inq_dimID_x")
-    status = NF90_INQ_DIMID(fidU,"y",dimID_y)               ; call erreur(status,.TRUE.,"inq_dimID_y")
-    status = NF90_INQ_DIMID(fidU,"z",dimID_depthv)
-    if (status .ne. 0) status = NF90_INQ_DIMID(fidU,"depth",dimID_depthv)
-    if (status .ne. 0) status = NF90_INQ_DIMID(fidU,"depthv",dimID_depthv)
-    if (status .ne. 0) status = NF90_INQ_DIMID(fidU,"deptht",dimID_depthv)
+    status = NF90_INQ_DIMID(fidV,"time_counter",dimID_time) ; call erreur(status,.TRUE.,"inq_dimID_time")
+    status = NF90_INQ_DIMID(fidV,"x",dimID_x)               ; call erreur(status,.TRUE.,"inq_dimID_x")
+    status = NF90_INQ_DIMID(fidV,"y",dimID_y)               ; call erreur(status,.TRUE.,"inq_dimID_y")
+    status = NF90_INQ_DIMID(fidV,"depthv",dimID_depthv)
+    if (status .ne. 0) status = NF90_INQ_DIMID(fidV,"depth",dimID_depthv)
+    if (status .ne. 0) status = NF90_INQ_DIMID(fidV,"deptht",dimID_depthv)
+    if (status .ne. 0) status = NF90_INQ_DIMID(fidV,"z",dimID_depthv)
     call erreur(status,.TRUE.,"inq_dimID_depthv")
 
-    status = NF90_INQUIRE_DIMENSION(fidU,dimID_time,len=mtime)     ; call erreur(status,.TRUE.,"inq_dim_time")
-    status = NF90_INQUIRE_DIMENSION(fidU,dimID_x,len=mlon)         ; call erreur(status,.TRUE.,"inq_dim_x")
-    status = NF90_INQUIRE_DIMENSION(fidU,dimID_y,len=mlat)         ; call erreur(status,.TRUE.,"inq_dim_y")
-    status = NF90_INQUIRE_DIMENSION(fidU,dimID_depthv,len=mdepthv) ; call erreur(status,.TRUE.,"inq_dim_depthv")
+    status = NF90_INQUIRE_DIMENSION(fidV,dimID_time,len=mtime)     ; call erreur(status,.TRUE.,"inq_dim_time")
+    status = NF90_INQUIRE_DIMENSION(fidV,dimID_x,len=mlon)         ; call erreur(status,.TRUE.,"inq_dim_x")
+    status = NF90_INQUIRE_DIMENSION(fidV,dimID_y,len=mlat)         ; call erreur(status,.TRUE.,"inq_dim_y")
+    status = NF90_INQUIRE_DIMENSION(fidV,dimID_depthv,len=mdepthv) ; call erreur(status,.TRUE.,"inq_dim_depthv")
 
     ALLOCATE( nav_lon(mlon,mlat), nav_lat(mlon,mlat) )
     ALLOCATE( depthv(mdepthv) )
 
-    status = NF90_INQ_VARID(fidU,"nav_lon",lon_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"lon",lon_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"longitude",lon_ID)
+    status = NF90_INQ_VARID(fidV,"nav_lon",lon_ID)
+    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"lon",lon_ID)
+    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"longitude",lon_ID)
     call erreur(status,.TRUE.,"inq_lon_ID")
-    status = NF90_INQ_VARID(fidU,"nav_lat",lat_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"lat",lat_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"latitude",lat_ID)
+    status = NF90_INQ_VARID(fidV,"nav_lat",lat_ID)
+    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"lat",lat_ID)
+    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"latitude",lat_ID)
     call erreur(status,.TRUE.,"inq_lat_ID")
-    status = NF90_INQ_VARID(fidU,"depthv",depth_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"depth",depth_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"deptht",depth_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"nav_lev",depth_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidU,"z",depth_ID)
+    status = NF90_INQ_VARID(fidV,"depthv",depth_ID)
+    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"depth",depth_ID)
+    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"deptht",depth_ID)
+    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"nav_lev",depth_ID)
+    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"z",depth_ID)
     call erreur(status,.TRUE.,"inq_depthv_ID")
         
-    status = NF90_GET_VAR(fidU,lon_ID,nav_lon)                   ; call erreur(status,.TRUE.,"getvar_lon")
-    status = NF90_GET_VAR(fidU,lat_ID,nav_lat)                   ; call erreur(status,.TRUE.,"getvar_lat")
-    status = NF90_GET_VAR(fidU,depth_ID,depthv)                  ; call erreur(status,.TRUE.,"getvar_depthv")
+    status = NF90_GET_VAR(fidV,lon_ID,nav_lon)                   ; call erreur(status,.TRUE.,"getvar_lon")
+    status = NF90_GET_VAR(fidV,lat_ID,nav_lat)                   ; call erreur(status,.TRUE.,"getvar_lat")
+    status = NF90_GET_VAR(fidV,depth_ID,depthv)                  ; call erreur(status,.TRUE.,"getvar_depthv")
 
-    status = NF90_CLOSE(fidU)                                    ; call erreur(status,.TRUE.,"fin_lecture")
+    status = NF90_CLOSE(fidV)                                    ; call erreur(status,.TRUE.,"fin_lecture")
 
     exit
 
@@ -390,7 +366,7 @@ write(command_str,888) TRIM(config_dir)
 CALL system(TRIM(command_str))
 
 !=================================================================================
-! 3- Process all gridU files over specified period
+! 5- Process all gridU files over specified period
 !=================================================================================
 
 DO kyear=nn_yeari,nn_yearf
@@ -401,53 +377,17 @@ DO kyear=nn_yeari,nn_yearf
 
       SELECT CASE(nfmt)
         CASE(191)
-          write(file_in_gridU,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_U)
-          write(file_in_gridV,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_V)
+          write(file_in_gridU,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_U)
+          write(file_in_gridV,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_V)
         CASE(192)
-          write(file_in_gridU,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_U) 
-          write(file_in_gridV,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_V) 
+          write(file_in_gridU,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_U) 
+          write(file_in_gridV,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_V) 
         CASE(193)
-          write(file_in_gridU,193) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-          write(file_in_gridV,193) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-        CASE(194) 
-          write(file_in_gridU,194) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-          write(file_in_gridV,194) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-        CASE(195) 
-          write(file_in_gridU,195) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_U)
-          write(file_in_gridV,195) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_V)
-        CASE(196) 
-          write(file_in_gridU,196) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_U)
-          write(file_in_gridV,196) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_V)
-        CASE(197) 
-          write(file_in_gridU,197) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-          write(file_in_gridV,197) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-        CASE(198)
-          write(file_in_gridU,198) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
-          write(file_in_gridV,198) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
-        CASE(291)
-          write(file_in_gridU,291) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_U)
-          write(file_in_gridV,291) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_V)
-        CASE(292)
-          write(file_in_gridU,292) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_U) 
-          write(file_in_gridV,292) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_V) 
-        CASE(293)
-          write(file_in_gridU,293) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-          write(file_in_gridV,293) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-        CASE(294) 
-          write(file_in_gridU,294) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-          write(file_in_gridV,294) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-        CASE(295) 
-          write(file_in_gridU,295) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_U)
-          write(file_in_gridV,295) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_V)
-        CASE(296) 
-          write(file_in_gridU,296) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_U)
-          write(file_in_gridV,296) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_V)
-        CASE(297) 
-          write(file_in_gridU,297) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-          write(file_in_gridV,297) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-        CASE(298)
-          write(file_in_gridU,298) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
-          write(file_in_gridV,298) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
+          write(file_in_gridU,193) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_U)
+          write(file_in_gridV,193) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_V)
+        CASE(194)
+          write(file_in_gridU,194) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_U)
+          write(file_in_gridV,194) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_V)
         CASE DEFAULT 
           write(*,*) 'wrong nfmt value >>>>>> stop !'
           stop
@@ -457,20 +397,14 @@ DO kyear=nn_yeari,nn_yearf
       IF ( existfile ) THEN
 
         ! output file format :
-        if     ( nfmt .eq. 191 .or. nfmt .eq. 193 .or. nfmt .eq. 195 .or. nfmt .eq. 197 &
-        &   .or. nfmt .eq. 291 .or. nfmt .eq. 293 .or. nfmt .eq. 295 .or. nfmt .eq. 297 ) then
-          401 FORMAT(a,'/BDY/bdyV_u2d_',i4.4,'_',i2.2,'_',i2.2,'_',a,'.nc')
-          write(file_bdy_gridV2d,401) TRIM(config_dir), kyear, kmonth, kday, TRIM(config)
+        if     ( nfmt .eq. 191 .or. nfmt .eq. 193 ) then
           501 FORMAT(a,'/BDY/bdyV_u3d_',i4.4,'_',i2.2,'_',i2.2,'_',a,'.nc')
           write(file_bdy_gridV3d,501) TRIM(config_dir), kyear, kmonth, kday, TRIM(config)
-        elseif ( nfmt .eq. 192 .or. nfmt .eq. 194 .or. nfmt .eq. 196 .or. nfmt .eq. 198 &
-        &   .or. nfmt .eq. 292 .or. nfmt .eq. 294 .or. nfmt .eq. 296 .or. nfmt .eq. 298 ) then
-          402 FORMAT(a,'/BDY/bdyV_u2d_',i4.4,'_',i2.2,'_',a,'.nc')
-          write(file_bdy_gridV2d,402) TRIM(config_dir), kyear, kmonth, TRIM(config)
+        elseif ( nfmt .eq. 192 .or. nfmt .eq. 194 ) then
           502 FORMAT(a,'/BDY/bdyV_u3d_',i4.4,'_',i2.2,'_',a,'.nc')
           write(file_bdy_gridV3d,502) TRIM(config_dir), kyear, kmonth, TRIM(config)
         else
-          write(*,*) 'Do not forget to include new file format in the format definition for file_bdy_gridV2d and file_bdy_gridV3d  >>>> stop'
+          write(*,*) 'Do not forget to include new file format in the format definition for file_bdy_gridV3d and file_bdy_gridV3d  >>>> stop'
           stop
         endif
 
@@ -480,11 +414,11 @@ DO kyear=nn_yeari,nn_yearf
         ALLOCATE( time(mtime) )
         
         !---------------------------------------
-        ! Read input velocity :
+        ! 5a- Read input velocity :
 
         write(*,*) 'Reading U in ', TRIM(file_in_gridU)
         
-        status = NF90_OPEN(TRIM(file_in_gridU),0,fidU)                ; call erreur(status,.TRUE.,"read ORCA12 TS") 
+        status = NF90_OPEN(TRIM(file_in_gridU),0,fidU)                ; call erreur(status,.TRUE.,"read GLOBAL U") 
         
         status = NF90_INQ_VARID(fidU,"time_counter",time_ID)          ; call erreur(status,.TRUE.,"inq_time_ID")
         status = NF90_INQ_VARID(fidU,"vozocrtx",vozocrtx_ID)
@@ -500,11 +434,11 @@ DO kyear=nn_yeari,nn_yearf
         status = NF90_CLOSE(fidU)                                     ; call erreur(status,.TRUE.,"fin_lecture")     
 
         !---------------------------------------
-        ! Read input velocity :
+        ! 5b- Read input velocity :
 
         write(*,*) 'Reading V in ', TRIM(file_in_gridV)
         
-        status = NF90_OPEN(TRIM(file_in_gridV),0,fidV)                ; call erreur(status,.TRUE.,"read ORCA12 TS") 
+        status = NF90_OPEN(TRIM(file_in_gridV),0,fidV)                ; call erreur(status,.TRUE.,"read GLOBAL V") 
         
         status = NF90_INQ_VARID(fidV,"vomecrty",vomecrty_ID)
         if ( status .ne. 0 ) status = NF90_INQ_VARID(fidV,"voce",vomecrty_ID)
@@ -515,7 +449,7 @@ DO kyear=nn_yeari,nn_yearf
         status = NF90_CLOSE(fidV)                                     ; call erreur(status,.TRUE.,"fin_lecture")     
 
         !---------------------------------------
-        ! Remove possible NaNs :
+        ! 5c- Remove possible NaNs :
 
         write(*,*) 'Remove NaNs'
  
@@ -535,7 +469,7 @@ DO kyear=nn_yeari,nn_yearf
         enddo
 
         !---------------------------------------
-        ! Express velocities onto the other grid :
+        ! 5d- Express velocities onto the other grid :
 
         write(*,*) 'Express U on gridV'
 
@@ -555,8 +489,10 @@ DO kyear=nn_yeari,nn_yearf
         enddo
         enddo
 
+        DEALLOCATE( vozocrtx_GLO )
+
         !---------------------------------------
-        ! Fill values on bdyU :
+        ! 5e- Fill values on bdyU :
       
         write(*,*) 'Interpolating then rotating...'
 
@@ -606,6 +542,9 @@ DO kyear=nn_yeari,nn_yearf
           enddo !- kz
 
           !- Removing barotropic component :
+          !  NB: here no need to account for vvl because vbcl = v3d - sum_k(v3d*e3v)/sum_k(e3v)
+          !                                                   = v3d - sum_k(v3d*e3v_0)/sum_k(e3v_0)
+          !                                      because e3v = e3v_0 * ( 1 + ssh_v / H )
           do kt=1,mtime
             tmpdep = 0.e0
             tmpbtp = 0.e0
@@ -621,8 +560,10 @@ DO kyear=nn_yeari,nn_yearf
 
         enddo !- kbdy
 
+        DEALLOCATE( vomecrty_GLO, vozocrtx_GLO_V )
+
         !--------------------------------------
-        ! Write BDY netcdf file for baroclinic velocity :
+        ! 5f- Write BDY netcdf file for baroclinic velocity :
 
         write(*,*) 'Creating ', TRIM(file_bdy_gridV3d)
         status = NF90_CREATE(TRIM(file_bdy_gridV3d),NF90_NOCLOBBER,fidN) ; call erreur(status,.TRUE.,'create BDY file')                     
@@ -682,15 +623,12 @@ DO kyear=nn_yeari,nn_yearf
         status = NF90_CLOSE(fidN) ; call erreur(status,.TRUE.,"close BDY file")
         
         !--       
-        DEALLOCATE( vomecrty_GLO, vozocrtx_GLO, vozocrtx_GLO_V, time )
-        DEALLOCATE( vomecrty_bdy )
+        DEALLOCATE( vomecrty_bdy, time )
 
         !--
-        if     ( nfmt .eq. 191 .or. nfmt .eq. 193 .or. nfmt .eq. 195 .or. nfmt .eq. 197 &
-        &   .or. nfmt .eq. 291 .or. nfmt .eq. 293 .or. nfmt .eq. 295 .or. nfmt .eq. 297 ) then
+        if     ( nfmt .eq. 191 .or. nfmt .eq. 193 ) then
           write(*,*) 'Looking for next existing day in this month/year'
-        elseif ( nfmt .eq. 192 .or. nfmt .eq. 194 .or. nfmt .eq. 196 .or. nfmt .eq. 198 &
-        &   .or. nfmt .eq. 292 .or. nfmt .eq. 294 .or. nfmt .eq. 296 .or. nfmt .eq. 298 ) then
+        elseif ( nfmt .eq. 192 .or. nfmt .eq. 194 ) then
           write(*,*) 'Only one file per month => switching to next month'
           exit
         else

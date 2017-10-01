@@ -132,11 +132,11 @@ List of contributors:
 
         # fill the &general and &griddata section of the namelist
 
-        ./submit.sh extract_extract_coordinates 01  ## -> creates a "config_dir" directory (see namelist)
-				                    ## -> creates the regional coordinates file 
-                                                    ##    coordinates_${CONFIG}.nc (stored in "config_dir")
+        ./submit.sh extract_coordinates 01  ## -> creates a "config_dir" directory (see namelist)
+			                    ## -> creates the regional coordinates file 
+                                            ##    coordinates_${CONFIG}.nc (stored in "config_dir")
 
-        ./submit.sh build_linear_interp_weights 01  ## -> creates coeff_linear_${CONFIG}.nc (in "config_dir")
+        ./submit.sh build_linear_interp_weights 03  ## -> creates coeff_linear_${CONFIG}.nc (in "config_dir")
 
         # If you want to extract the bathymetry from a nemo simulation (e.g. eORCA12), while being 
         # consistent with the BDY bathymetry, do:
@@ -144,7 +144,7 @@ List of contributors:
 
         # Else, if you want to put RTOPO bathymetry within the domain while being consistent with the
         # BDY bathymetry, then fill the &rtopo section of the namlelist and do:
-        ./submit.sh extract_bathy_rtopo 01 30
+        ./submit.sh extract_bathy_rtopo 03 30  ## not tested yet
 
 #########################################################################################################
 #########################################################################################################
@@ -154,7 +154,7 @@ List of contributors:
         ## NB: set jpni=jpnj=jpnij=0 in the &nammpp section of NEMO's namelist.
         ##     and use the same &namdom parameters as in the simulation used as BDYs.
         qsub run_nemo.sh    ## this will create mesh_mask_${CONFIG}.nc before crashing
-        ./rebuild_mesh_mask.sh 0
+        ./rebuild.sh mesh_mask
         mv mesh_mask.nc $WORKDIR/input/nemo_${CONFIG}/mesh_mask_${CONFIG}.nc ## directory defined as config_dir
 
 #########################################################################################################
@@ -172,19 +172,33 @@ List of contributors:
 	./submit.sh build_coordinates_bdy 01  ## -> creates the coordinate file for lateral boundaries
                                               ##    e.g. coordinates_bdy_AMU12.nc
 
-        ./submit.sh extract_bdy_gridT 01 30   ## -> creates T,S bdy files and store them in a BDY folder
+        ./submit.sh extract_bdy_gridT 01 60   ## -> creates T,S bdy files and store them in the BDY folder
                                               ##    itself located in directory defined as config_dir
 
-        ./submit.sh extract_bdy_gridU 01 30   ## -> creates U3d bdy files and store them in a BDY folder
-        ./submit.sh extract_bdy_gridV 01 30   ## -> creates V3d bdy files and store them in a BDY folder
-        ./submit.sh extract_bdy_psi 01 30     ## -> creates U2d,V2d bdy files and store them in a BDY folder
-        ./submit.sh extract_bdy_icemod 01 30  ## -> creates ice bdy files and store them in a BDY folder
-        ./submit.sh extract_bdy_ssh 01 30     ## -> creates SSH bdy files and store them in a BDY folder
+        ./submit.sh extract_bdy_icemod 01     ## -> creates ice bdy files and store them in the BDY folder
 
-        ./concatenate_yearly_BDY.sh           ## Edit this file first.
-                                              ## -> concatenate the bdy files into yearly files
+        ./submit.sh extract_bdy_ssh 01        ## -> creates SSH bdy files and store them in the BDY folder
+                                              ##    NB: only bdyT_ssh are used by NEMO, but bdyU_ssh and 
+                                              ##        bdyV_ssh are used by extract_bdy_psi.f90. 
 
-        ./submit.sh extract_bdy_tides 01      ## if you want to put tidal signals along the BDYs
+        # Before extracting  baroclinic and barotropic velocities, you need to calculate the barotropic
+        # stream function (BSF). To do so, install the CDFTOOLS: https://github.com/meom-group/CDFTOOLS
+        # Then you can adapt compute_BSF.sh, and execute it:
+        ./submit.sh 01 30 compute_BSF.sh      ## -> creates BSF files with same format as other inputs.
+
+        # Then generate BDY files containing baroclinic velocities (simple interpolation):
+        ./submit.sh extract_bdy_gridU 01 60   ## -> creates U3d bdy files and store them in the BDY folder
+        ./submit.sh extract_bdy_gridV 01 60   ## -> creates V3d bdy files and store them in the BDY folder
+
+        # Then generate BDY files containing barotropic velocities (from BSF to conserve transports):
+        ./submit.sh extract_bdy_psi 01 20     ## -> creates U2d,V2d bdy files, store them in the BDY folder
+
+        # To concatenate all the BDY files into yearly files, adapt concatenate_yearly_BDY.sh and execute: 
+        ./concatenate_yearly_BDY.sh           ## -> concatenate to yearly files in the BDY folder
+                                              ## NB: to do after extract_bdy_psi (ssh_U/V needed)
+
+        # To prepare BDY files containing the tidal harmonics (only is you have tides at your BDYs) :
+        ./submit.sh extract_bdy_tides 01 20   ## -> create bdytide files and store them in the BDY folder
 
 #########################################################################################################
 #########################################################################################################

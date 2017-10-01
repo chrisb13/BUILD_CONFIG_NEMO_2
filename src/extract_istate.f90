@@ -26,9 +26,9 @@ IMPLICIT NONE
 
 !-- namelist parameters :
 namelist /general/ config, config_dir
-namelist /init/ nn_init, file_in_mask_extract, file_in_T, file_in_S, nn_eosmatch, nn_iter, nn_rsmax, nn_rzmax, &
+namelist /init/ file_in_mask_extract, file_in_T, file_in_S, nn_eosmatch, nn_iter, nn_rsmax, nn_rzmax, &
 &               rn_temp, rn_sal, nn_smooth, file_in_zgr_extract
-INTEGER                               :: nn_init, nn_iter, nn_rsmax, nn_rzmax, nn_eosmatch, nn_smooth
+INTEGER                               :: nn_iter, nn_rsmax, nn_rzmax, nn_eosmatch, nn_smooth
 CHARACTER(LEN=50)                     :: config
 CHARACTER(LEN=150)                    :: file_in_mask_extract, file_in_zgr_extract, config_dir, file_in_T, file_in_S
 REAL(KIND=4)                          :: rn_temp, rn_sal
@@ -274,236 +274,210 @@ endif
 ALLOCATE( votemper_REG(mx_REG,my_REG,mz_REG) )
 ALLOCATE( vosaline_REG(mx_REG,my_REG,mz_REG) )
 
-IF ( nn_init == 1 ) THEN
-
-  write(*,*) ' nn_init=1 HAS NOT BEEN IMPLEMENTED YET  >>>>> STOP'
+if ( mz_REG .ne. mz_GLO ) then
+  write(*,*) '~!@#$%^ Adapt script for different number of vertical levels >>>> Stop!!'
   stop
+endif
 
-ELSEIF ( nn_init == 2 ) THEN
+! Just extract where ocean points on both grids :
+ALLOCATE( missing(mx_REG,my_REG,mz_REG) )
+ALLOCATE( tmp_missing(mx_REG,my_REG,mz_REG) )
+ALLOCATE( tmp_votemper_REG(mx_REG,my_REG,mz_REG) )
+ALLOCATE( tmp_vosaline_REG(mx_REG,my_REG,mz_REG) )
+missing(:,:,:)=0
+votemper_REG(:,:,:)=0.d0
+vosaline_REG(:,:,:)=0.d0
+do iREG=1,mx_REG
+do jREG=1,my_REG
+do kk=1,mz_REG
 
-  if ( mz_REG .ne. mz_GLO ) then
-    write(*,*) '~!@#$%^ Adapt script for different number of vertical levels >>>> Stop!!'
-    stop
-  endif
+    aNW = tmask_GLO( ziWt(iREG,jREG), zjNt(iREG,jREG),kk ) * e3t_GLO( ziWt(iREG,jREG),zjNt(iREG,jREG),kk ) * wgNWt(iREG,jREG)
+    aSW = tmask_GLO( ziWt(iREG,jREG), zjSt(iREG,jREG),kk ) * e3t_GLO( ziWt(iREG,jREG),zjSt(iREG,jREG),kk ) * wgSWt(iREG,jREG)
+    aNE = tmask_GLO( ziEt(iREG,jREG), zjNt(iREG,jREG),kk ) * e3t_GLO( ziEt(iREG,jREG),zjNt(iREG,jREG),kk ) * wgNEt(iREG,jREG)
+    aSE = tmask_GLO( ziEt(iREG,jREG), zjSt(iREG,jREG),kk ) * e3t_GLO( ziEt(iREG,jREG),zjSt(iREG,jREG),kk ) * wgSEt(iREG,jREG)
 
- ! !- Read global attributes of coordinate file to get grid correspondance :
- ! !       i_ORCA12 = ai * i_ORCA025 + bi
- ! !       j_ORCA12 = aj * j_ORCA025 + bj
- ! status = NF90_OPEN(TRIM(file_in_coord_REG),0,fidCOORD); call erreur(status,.TRUE.,"read coord input")
- ! status = NF90_GET_ATT(fidCOORD, NF90_GLOBAL, "ai", ai); call erreur(status,.TRUE.,"read att1")
- ! status = NF90_GET_ATT(fidCOORD, NF90_GLOBAL, "bi", bi); call erreur(status,.TRUE.,"read att2")
- ! status = NF90_GET_ATT(fidCOORD, NF90_GLOBAL, "aj", aj); call erreur(status,.TRUE.,"read att3")
- ! status = NF90_GET_ATT(fidCOORD, NF90_GLOBAL, "bj", bj); call erreur(status,.TRUE.,"read att4")
- ! status = NF90_GET_ATT(fidCOORD, NF90_GLOBAL, "imin_extraction", imin_ORCA12); call erreur(status,.TRUE.,"read att5")
- ! status = NF90_GET_ATT(fidCOORD, NF90_GLOBAL, "jmin_extraction", jmin_ORCA12); call erreur(status,.TRUE.,"read att6")
- ! status = NF90_CLOSE(fidCOORD)                         ; call erreur(status,.TRUE.,"end read fidCOORD")
+    aa = aNW + aSW + aNE + aSE
 
-  ! Just extract where ocean points on both grids :
-  ALLOCATE( missing(mx_REG,my_REG,mz_REG) )
-  ALLOCATE( tmp_missing(mx_REG,my_REG,mz_REG) )
-  ALLOCATE( tmp_votemper_REG(mx_REG,my_REG,mz_REG) )
-  ALLOCATE( tmp_vosaline_REG(mx_REG,my_REG,mz_REG) )
-  missing(:,:,:)=0
-  votemper_REG(:,:,:)=0.d0
-  vosaline_REG(:,:,:)=0.d0
+    if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
+
+      votemper_REG (iREG,jREG,kk) = (   votemper_GLO( ziWt(iREG,jREG), zjNt(iREG,jREG),kk ) * aNW       &
+      &                               + votemper_GLO( ziWt(iREG,jREG), zjSt(iREG,jREG),kk ) * aSW       &
+      &                               + votemper_GLO( ziEt(iREG,jREG), zjNt(iREG,jREG),kk ) * aNE       &
+      &                               + votemper_GLO( ziEt(iREG,jREG), zjSt(iREG,jREG),kk ) * aSE ) / aa
+
+      vosaline_REG (iREG,jREG,kk) = (   vosaline_GLO( ziWt(iREG,jREG), zjNt(iREG,jREG),kk ) * aNW       &
+      &                               + vosaline_GLO( ziWt(iREG,jREG), zjSt(iREG,jREG),kk ) * aSW       &
+      &                               + vosaline_GLO( ziEt(iREG,jREG), zjNt(iREG,jREG),kk ) * aNE       &
+      &                               + vosaline_GLO( ziEt(iREG,jREG), zjSt(iREG,jREG),kk ) * aSE ) / aa
+
+    elseif ( tmask_REG(iREG,jREG,kk) .eq. 1 ) then !- oceanic point on regional grid but all land points on global grid
+
+      missing(iREG,jREG,kk) = 1
+
+    endif
+
+enddo
+enddo
+enddo
+
+! Look for closest neighbours where we have missing values:
+do kiter=1,nn_iter
+  ntest = NINT(sum(sum(sum(FLOAT(missing),3),2),1))
+  write(*,*) '  kiter = ', kiter
+  write(*,*) '     nb of pts with missing value: ', ntest
+  if ( ntest .eq. 0 ) exit
+  tmp_votemper_REG(:,:,:)=votemper_REG(:,:,:)
+  tmp_vosaline_REG(:,:,:)=vosaline_REG(:,:,:)
+  tmp_missing(:,:,:)=missing(:,:,:)
   do iREG=1,mx_REG
   do jREG=1,my_REG
   do kk=1,mz_REG
-
-      aNW = tmask_GLO( ziWt(iREG,jREG), zjNt(iREG,jREG),kk ) * e3t_GLO( ziWt(iREG,jREG),zjNt(iREG,jREG),kk ) * wgNWt(iREG,jREG)
-      aSW = tmask_GLO( ziWt(iREG,jREG), zjSt(iREG,jREG),kk ) * e3t_GLO( ziWt(iREG,jREG),zjSt(iREG,jREG),kk ) * wgSWt(iREG,jREG)
-      aNE = tmask_GLO( ziEt(iREG,jREG), zjNt(iREG,jREG),kk ) * e3t_GLO( ziEt(iREG,jREG),zjNt(iREG,jREG),kk ) * wgNEt(iREG,jREG)
-      aSE = tmask_GLO( ziEt(iREG,jREG), zjSt(iREG,jREG),kk ) * e3t_GLO( ziEt(iREG,jREG),zjSt(iREG,jREG),kk ) * wgSEt(iREG,jREG)
-
-      aa = aNW + aSW + aNE + aSE
-
-      if ( aa .gt. eps .and. zjSt(iREG,jREG) .gt. 1 ) then
-
-        votemper_REG (iREG,jREG,kk) = (   votemper_GLO( ziWt(iREG,jREG), zjNt(iREG,jREG),kk ) * aNW       &
-        &                               + votemper_GLO( ziWt(iREG,jREG), zjSt(iREG,jREG),kk ) * aSW       &
-        &                               + votemper_GLO( ziEt(iREG,jREG), zjNt(iREG,jREG),kk ) * aNE       &
-        &                               + votemper_GLO( ziEt(iREG,jREG), zjSt(iREG,jREG),kk ) * aSE ) / aa
-
-        vosaline_REG (iREG,jREG,kk) = (   vosaline_GLO( ziWt(iREG,jREG), zjNt(iREG,jREG),kk ) * aNW       &
-        &                               + vosaline_GLO( ziWt(iREG,jREG), zjSt(iREG,jREG),kk ) * aSW       &
-        &                               + vosaline_GLO( ziEt(iREG,jREG), zjNt(iREG,jREG),kk ) * aNE       &
-        &                               + vosaline_GLO( ziEt(iREG,jREG), zjSt(iREG,jREG),kk ) * aSE ) / aa
-
-      elseif ( tmask_REG(iREG,jREG,kk) .eq. 1 ) then !- oceanic point on regional grid but all land points on global grid
-
-        missing(iREG,jREG,kk) = 1
-
+    if ( missing(iREG,jREG,kk) .eq. 1 ) then
+      iout=.FALSE.
+      do rz=0,nn_rzmax,1
+      do sg=-1,1,2 ! to look above first, then below
+        do rs=1,nn_rsmax,1
+          iii=iREG               ; jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG) ! to look right above/below
+          if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MIN(iREG+rs,mx_REG); jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MAX(iREG-rs,1)     ; jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=iREG               ; jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=iREG               ; jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MIN(iREG+rs,mx_REG); jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MIN(iREG+rs,mx_REG); jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MAX(iREG-rs,1)     ; jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG) 
+          if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MAX(iREG-rs,1)     ; jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG) 
+          if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then
+            iout=.TRUE.
+            exit
+          endif
+        enddo !- rs
+        if (iout) exit
+      enddo !-sg
+      if (iout) then
+        tmp_missing(iREG,jREG,kk) = 0
+        tmp_votemper_REG(iREG,jREG,kk) = votemper_REG(iii,jjj,kkk)
+        tmp_vosaline_REG(iREG,jREG,kk) = vosaline_REG(iii,jjj,kkk)
+        exit
+      elseif ( rz .eq. nn_rzmax .and. kiter .eq. nn_iter ) then
+        write(*,953) iREG, jREG, kk
+        953 FORMAT(' >>> WARNING for point (',3I5,') --> filled with rn_temp and rn_sal (to avoid this, increase nn_rsmax and/or nn_rzmax and/or nn_iter)')
+        tmp_missing(iREG,jREG,kk) = 0
+        tmp_votemper_REG(iREG,jREG,kk) = rn_temp
+        tmp_vosaline_REG(iREG,jREG,kk) = rn_sal
+        exit
       endif
+      enddo !-rz
+    endif !-if ( missing(iREG,jREG,kk) .eq. 1 )
+  enddo !- kk
+  enddo !- jREG
+  enddo !- iREG
+  missing(:,:,:)=tmp_missing(:,:,:)
+  votemper_REG(:,:,:)=tmp_votemper_REG(:,:,:)
+  vosaline_REG(:,:,:)=tmp_vosaline_REG(:,:,:)
+enddo !- kiter
 
+!- Smoothing :
+if ( nn_smooth .gt. 1 ) then
+  write(*,*) 'Smoothing window width = ', nn_smooth
+  dij=INT(nn_smooth*0.5)
+  tmp_votemper_REG(:,:,:)=votemper_REG(:,:,:)
+  tmp_vosaline_REG(:,:,:)=vosaline_REG(:,:,:)
+  do iREG=1,mx_REG
+  do jREG=1,my_REG
+  do kk=1,mz_REG
+    im1=MAX(iREG-dij,1) ; ip1=MIN(iREG+dij,mx_REG) 
+    jm1=MAX(jREG-dij,1) ; jp1=MIN(jREG+dij,my_REG)
+    if ( tmask_REG(iREG,jREG,kk) .eq. 1 ) then 
+      tmp_votemper_REG(iREG,jREG,kk) =   SUM( SUM( votemper_REG(im1:ip1,jm1:jp1,kk) * tmask_REG(im1:ip1,jm1:jp1,kk), 2), 1) &
+      &                                / SUM( SUM(                             1.0  * tmask_REG(im1:ip1,jm1:jp1,kk), 2), 1)
+      tmp_vosaline_REG(iREG,jREG,kk) =   SUM( SUM( vosaline_REG(im1:ip1,jm1:jp1,kk) * tmask_REG(im1:ip1,jm1:jp1,kk), 2), 1) &
+      &                                / SUM( SUM(                             1.0  * tmask_REG(im1:ip1,jm1:jp1,kk), 2), 1)
+    else
+      tmp_votemper_REG(iREG,jREG,kk) = 0.d0
+      tmp_vosaline_REG(iREG,jREG,kk) = 0.d0
+    endif
   enddo
   enddo
   enddo
+  votemper_REG(:,:,:)=tmp_votemper_REG(:,:,:)
+  vosaline_REG(:,:,:)=tmp_vosaline_REG(:,:,:)
+else
+  write(*,*) 'No Smoothing'
+endif
 
-  ! Look for closest neighbours where we have missing values:
-  do kiter=1,nn_iter
-    ntest = NINT(sum(sum(sum(FLOAT(missing),3),2),1))
-    write(*,*) '  kiter = ', kiter
-    write(*,*) '     nb of pts with missing value: ', ntest
-    if ( ntest .eq. 0 ) exit
-    tmp_votemper_REG(:,:,:)=votemper_REG(:,:,:)
-    tmp_vosaline_REG(:,:,:)=vosaline_REG(:,:,:)
-    tmp_missing(:,:,:)=missing(:,:,:)
-    do iREG=1,mx_REG
-    do jREG=1,my_REG
-    do kk=1,mz_REG
-      if ( missing(iREG,jREG,kk) .eq. 1 ) then
-        iout=.FALSE.
-        do rz=0,nn_rzmax,1
-        do sg=-1,1,2 ! to look above first, then below
-          do rs=1,nn_rsmax,1
-            iii=iREG               ; jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG) ! to look right above/below
-            if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MIN(iREG+rs,mx_REG); jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MAX(iREG-rs,1)     ; jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=iREG               ; jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=iREG               ; jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MIN(iREG+rs,mx_REG); jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MIN(iREG+rs,mx_REG); jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MAX(iREG-rs,1)     ; jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG) 
-            if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MAX(iREG-rs,1)     ; jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG) 
-            if ( tmask_REG(iii,jjj,kkk) .eq. 1 .and. missing(iii,jjj,kkk) .eq. 0 ) then
-              iout=.TRUE.
-              exit
-            endif
-          enddo !- rs
-          if (iout) exit
-        enddo !-sg
-        if (iout) then
-          tmp_missing(iREG,jREG,kk) = 0
-          tmp_votemper_REG(iREG,jREG,kk) = votemper_REG(iii,jjj,kkk)
-          tmp_vosaline_REG(iREG,jREG,kk) = vosaline_REG(iii,jjj,kkk)
-          exit
-        elseif ( rz .eq. nn_rzmax .and. kiter .eq. nn_iter ) then
-          write(*,953) iREG, jREG, kk
-          953 FORMAT(' >>> WARNING for point (',3I5,') --> filled with rn_temp and rn_sal (to avoid this, increase nn_rsmax and/or nn_rzmax and/or nn_iter)')
-          tmp_missing(iREG,jREG,kk) = 0
-          tmp_votemper_REG(iREG,jREG,kk) = rn_temp
-          tmp_vosaline_REG(iREG,jREG,kk) = rn_sal
-          exit
-        endif
-        enddo !-rz
-      endif !-if ( missing(iREG,jREG,kk) .eq. 1 )
-    enddo !- kk
-    enddo !- jREG
-    enddo !- iREG
-    missing(:,:,:)=tmp_missing(:,:,:)
-    votemper_REG(:,:,:)=tmp_votemper_REG(:,:,:)
-    vosaline_REG(:,:,:)=tmp_vosaline_REG(:,:,:)
-  enddo !- kiter
-
-  !- Smoothing :
-  if ( nn_smooth .gt. 1 ) then
-    write(*,*) 'Smoothing window width = ', nn_smooth
-    dij=INT(nn_smooth*0.5)
-    tmp_votemper_REG(:,:,:)=votemper_REG(:,:,:)
-    tmp_vosaline_REG(:,:,:)=vosaline_REG(:,:,:)
-    do iREG=1,mx_REG
-    do jREG=1,my_REG
-    do kk=1,mz_REG
-      im1=MAX(iREG-dij,1) ; ip1=MIN(iREG+dij,mx_REG) 
-      jm1=MAX(jREG-dij,1) ; jp1=MIN(jREG+dij,my_REG)
-      if ( tmask_REG(iREG,jREG,kk) .eq. 1 ) then 
-        tmp_votemper_REG(iREG,jREG,kk) =   SUM( SUM( votemper_REG(im1:ip1,jm1:jp1,kk) * tmask_REG(im1:ip1,jm1:jp1,kk), 2), 1) &
-        &                                / SUM( SUM(                             1.0  * tmask_REG(im1:ip1,jm1:jp1,kk), 2), 1)
-        tmp_vosaline_REG(iREG,jREG,kk) =   SUM( SUM( vosaline_REG(im1:ip1,jm1:jp1,kk) * tmask_REG(im1:ip1,jm1:jp1,kk), 2), 1) &
-        &                                / SUM( SUM(                             1.0  * tmask_REG(im1:ip1,jm1:jp1,kk), 2), 1)
-      else
-        tmp_votemper_REG(iREG,jREG,kk) = 0.d0
-        tmp_vosaline_REG(iREG,jREG,kk) = 0.d0
+!- "Drowning", i.e. put closest value everywhere on the mask file to avoid issue if namdom is slightly changed :
+!  We just repeat the previous methodology, but for masked points
+write(*,*) 'Drowning, i.e. fill all masked points with closest neighbour'
+missing(:,:,:)=NINT(1-FLOAT(tmask_REG(:,:,:)))
+! Look for closest neighbours where we have missing values:
+do kiter=1,nn_iter
+  ntest = NINT(sum(sum(sum(FLOAT(missing),3),2),1))
+  write(*,*) '  kiter = ', kiter
+  write(*,*) '     remaining nb of masked points to fill: ', ntest
+  if ( ntest .eq. 0 ) exit
+  tmp_votemper_REG(:,:,:)=votemper_REG(:,:,:)
+  tmp_vosaline_REG(:,:,:)=vosaline_REG(:,:,:)
+  tmp_missing(:,:,:)=missing(:,:,:)
+  do iREG=1,mx_REG
+  do jREG=1,my_REG
+  do kk=1,mz_REG
+    if ( missing(iREG,jREG,kk) .eq. 1 ) then
+      iout=.FALSE.
+      do rz=0,nn_rzmax,1
+      do sg=-1,1,2 ! to look above first, then below
+        do rs=1,nn_rsmax,1
+          iii=iREG               ; jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG) ! to look right above/below
+          if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MIN(iREG+rs,mx_REG); jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MAX(iREG-rs,1)     ; jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=iREG               ; jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=iREG               ; jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MIN(iREG+rs,mx_REG); jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MIN(iREG+rs,mx_REG); jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
+          if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MAX(iREG-rs,1)     ; jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG) 
+          if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+          iii=MAX(iREG-rs,1)     ; jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG) 
+          if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
+        enddo !- rs
+        if (iout) exit
+      enddo !-sg
+      if (iout) then
+        tmp_missing(iREG,jREG,kk) = 0
+        tmp_votemper_REG(iREG,jREG,kk) = votemper_REG(iii,jjj,kkk)
+        tmp_vosaline_REG(iREG,jREG,kk) = vosaline_REG(iii,jjj,kkk)
+        exit
+      elseif ( rz .eq. nn_rzmax .and. kiter .eq. nn_iter ) then
+        tmp_missing(iREG,jREG,kk) = 0
+        tmp_votemper_REG(iREG,jREG,kk) = rn_temp
+        tmp_vosaline_REG(iREG,jREG,kk) = rn_sal
+        exit
       endif
-    enddo
-    enddo
-    enddo
-    votemper_REG(:,:,:)=tmp_votemper_REG(:,:,:)
-    vosaline_REG(:,:,:)=tmp_vosaline_REG(:,:,:)
-  else
-    write(*,*) 'No Smoothing'
-  endif
+      enddo !-rz
+    endif !-if ( missing(iREG,jREG,kk) .eq. 1 )
+  enddo !- kk
+  enddo !- jREG
+  enddo !- iREG
+  missing(:,:,:)=tmp_missing(:,:,:)
+  votemper_REG(:,:,:)=tmp_votemper_REG(:,:,:)
+  vosaline_REG(:,:,:)=tmp_vosaline_REG(:,:,:)
+enddo !- kiter
 
-  !- "Drowning", i.e. put closest value everywhere on the mask file to avoid issue if namdom is slightly changed :
-  !  We just repeat the previous methodology, but for masked points
-  write(*,*) 'Drowning, i.e. fill all masked points with closest neighbour'
-  missing(:,:,:)=NINT(1-FLOAT(tmask_REG(:,:,:)))
-  ! Look for closest neighbours where we have missing values:
-  do kiter=1,nn_iter
-    ntest = NINT(sum(sum(sum(FLOAT(missing),3),2),1))
-    write(*,*) '  kiter = ', kiter
-    write(*,*) '     remaining nb of masked points to fill: ', ntest
-    if ( ntest .eq. 0 ) exit
-    tmp_votemper_REG(:,:,:)=votemper_REG(:,:,:)
-    tmp_vosaline_REG(:,:,:)=vosaline_REG(:,:,:)
-    tmp_missing(:,:,:)=missing(:,:,:)
-    do iREG=1,mx_REG
-    do jREG=1,my_REG
-    do kk=1,mz_REG
-      if ( missing(iREG,jREG,kk) .eq. 1 ) then
-        iout=.FALSE.
-        do rz=0,nn_rzmax,1
-        do sg=-1,1,2 ! to look above first, then below
-          do rs=1,nn_rsmax,1
-            iii=iREG               ; jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG) ! to look right above/below
-            if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MIN(iREG+rs,mx_REG); jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MAX(iREG-rs,1)     ; jjj=jREG               ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=iREG               ; jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=iREG               ; jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MIN(iREG+rs,mx_REG); jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MIN(iREG+rs,mx_REG); jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG)
-            if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MAX(iREG-rs,1)     ; jjj=MIN(jREG+rs,my_REG); kkk= MIN(MAX(kk+rz*sg,1),mz_REG) 
-            if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-            iii=MAX(iREG-rs,1)     ; jjj=MAX(jREG-rs,1)     ; kkk= MIN(MAX(kk+rz*sg,1),mz_REG) 
-            if ( missing(iii,jjj,kkk) .eq. 0 ) then ; iout=.TRUE. ; exit ; endif
-          enddo !- rs
-          if (iout) exit
-        enddo !-sg
-        if (iout) then
-          tmp_missing(iREG,jREG,kk) = 0
-          tmp_votemper_REG(iREG,jREG,kk) = votemper_REG(iii,jjj,kkk)
-          tmp_vosaline_REG(iREG,jREG,kk) = vosaline_REG(iii,jjj,kkk)
-          exit
-        elseif ( rz .eq. nn_rzmax .and. kiter .eq. nn_iter ) then
-          tmp_missing(iREG,jREG,kk) = 0
-          tmp_votemper_REG(iREG,jREG,kk) = rn_temp
-          tmp_vosaline_REG(iREG,jREG,kk) = rn_sal
-          exit
-        endif
-        enddo !-rz
-      endif !-if ( missing(iREG,jREG,kk) .eq. 1 )
-    enddo !- kk
-    enddo !- jREG
-    enddo !- iREG
-    missing(:,:,:)=tmp_missing(:,:,:)
-    votemper_REG(:,:,:)=tmp_votemper_REG(:,:,:)
-    vosaline_REG(:,:,:)=tmp_vosaline_REG(:,:,:)
-  enddo !- kiter
-
-  !--  
-  DEALLOCATE( tmp_votemper_REG, tmp_vosaline_REG, missing )
-
-ELSE
-
-  write(*,*) ' THIS nn_init VALUE DOES NOT CORRESPOND TO SOMETHING KNOWN  >>>>> STOP'
-  stop
-
-ENDIF
+!--  
+DEALLOCATE( tmp_votemper_REG, tmp_vosaline_REG, missing )
 
 !=================================================================================
 ! 6- Writing initial state for temperature 

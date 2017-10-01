@@ -232,7 +232,6 @@ status = NF90_CLOSE(fidcoeff) ; call erreur(status,.TRUE.,"fin_lecture")
 ! 5- Projection onto regional grid :
 !=================================================================================
 
-
 do iREG=1,mx_REG
 do jREG=1,my_REG
   aNW = tmask_GLO( ziWt(iREG,jREG), zjNt(iREG,jREG) ) * wgNWt(iREG,jREG)
@@ -266,7 +265,8 @@ ALLOCATE( socoefr(mx_REG,my_REG) )
 socoefr(:,:) = 0.0
 
 !! manual corrections :
-if ( TRIM(config) == 'AMU12' .or. TRIM(config) == 'AMU12y' ) then
+if (      TRIM(config) == 'AMU12'   &
+&    .or. TRIM(config) == 'AMU12y'  ) then
   i0 = nn_imin_extract - 1811  ! To keep the boxes at the same position even if
   j0 = nn_jmin_extract -  571  ! nn_jmin_extract & nn_jmax_extract are changed.
   tmask_REG(i0+240:i0+320,j0+1:j0+80) = 0.0 ! to remove SSS restoring in the TG & PIG Bay

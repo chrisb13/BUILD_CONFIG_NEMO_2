@@ -2,12 +2,15 @@ program modif
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! N. Jourdain, LGGE-CNRS, March 2015
 !
-! Used to build netcdf coordinate file for BDY
+! Used to extract sea ice properties along the BDY
 !
 ! 0- Initialiartions
-! 1- Read information on grids
-! 2- Read input file dimensions in first existing file for specified time window
-! 3- Process all SSH files over specified period
+! 1a- Read GLOBAL mask
+! 1b- Read BDY coordinates
+! 2- Read REGIONAL mask
+! 3- READ INTERPOLATION COEFFICIENTS FOR REGIONAL CONFIGURATION
+! 4- Read input file dimensions in first existing file for specified time window
+! 5- Process all sea ice files over specified period
 !
 ! history : - Feb. 2017: version with namelist (N. Jourdain)
 !
@@ -18,11 +21,11 @@ IMPLICIT NONE
 
 !-- namelist parameters :
 namelist /general/ config, config_dir
-namelist /bdy_data/ nn_yeari, nn_yearf, data_dir, data_prefix, nn_bdy_eosmatch, &
-&                   data_suffix_T, data_suffix_S, data_suffix_U, data_suffix_V, &
-&                   data_suffix_ssh, data_suffix_bsf, data_suffix_ice,          &
+namelist /bdy_data/ nn_yeari, nn_yearf, data_dir, data_prefix, nn_bdy_eosmatch,    &
+&                   data_suffix_T, data_suffix_S, data_suffix_U, data_suffix_V,    &
+&                   data_suffix_ssh, data_suffix_bsf, data_suffix_ice, sep1, sep2, &
 &                   file_data_mask, file_data_zgr, file_data_hgr
-CHARACTER(LEN=50)                    :: config
+CHARACTER(LEN=50)                    :: config, sep1, sep2
 CHARACTER(LEN=150)                   :: config_dir, data_dir, data_prefix, data_suffix_T, data_suffix_S, &
 &                                       data_suffix_U, data_suffix_V, data_suffix_ssh, data_suffix_ice,  &
 &                                       data_suffix_bsf, file_data_mask, file_data_zgr, file_data_hgr
@@ -47,7 +50,7 @@ INTEGER*4,ALLOCATABLE,DIMENSION(:)   :: list_fmt
 INTEGER*4,ALLOCATABLE,DIMENSION(:,:) :: nbit, nbjt, nbrt
 REAL*4,ALLOCATABLE,DIMENSION(:,:)    :: glamt_bdy, gphit_bdy, e1t, e2t, nav_lon, nav_lat
 REAL*4,ALLOCATABLE,DIMENSION(:,:,:)  :: ileadfra_GLO, ileadfra_bdy, isnowthi_GLO, isnowthi_bdy, iicethic_GLO, iicethic_bdy
-REAL*4,ALLOCATABLE,DIMENSION(:)      :: deptht
+!REAL*4,ALLOCATABLE,DIMENSION(:)      :: deptht
 REAL*8,ALLOCATABLE,DIMENSION(:)      :: time
 LOGICAL                              :: existfile
 
@@ -63,7 +66,7 @@ REAL*4,ALLOCATABLE,DIMENSION(:,:)      :: wgNEt, wgNWt, wgSWt, wgSEt
 REAL*8                                 :: eps, aa, aSW, aNW, aSE, aNE
 
 !=================================================================================
-!- 0- Initialiartions
+! 0- Initialiartions
 !=================================================================================
 
 write(*,*) 'Reading namelist parameters'
@@ -118,7 +121,7 @@ status = NF90_GET_VAR(fidMSKIN,tmask_GLO_ID,tmask_GLO); call erreur(status,.TRUE
 status = NF90_CLOSE(fidMSKIN); call erreur(status,.TRUE.,"end read mask_GLO")
 
 !=================================================================================
-! 1c- Read BDY coordinates
+! 1b- Read BDY coordinates
 !=================================================================================
 
 write(*,*) 'Reading BDY coordinates in ', TRIM(file_coord)
@@ -224,71 +227,36 @@ status = NF90_CLOSE(fidcoeff) ; call erreur(status,.TRUE.,"fin_lecture")
 !=================================================================================
 
 !- accepted input format :
-191 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,'_',i2.2,'_',i2.2,'_',a,'.nc')  ! <data_dir>/YYYY/<data_prefix>_YYYY_MM_DD_<data_suffix_ice>.nc
-192 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,'_',i2.2,'_',a,'.nc')           ! <data_dir>/YYYY/<data_prefix>_YYYY_MM_<data_suffix_ice>.nc
-193 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,'_',i2.2,'_',i2.2,'.nc')        ! <data_dir>/YYYY/<data_prefix>_YYYY_MM_DD.nc
-194 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,'_',i2.2,'.nc')                 ! <data_dir>/YYYY/<data_prefix>_YYYY_MM.nc
-195 FORMAT(a,'/',a,'_',i4.4,'_',i2.2,'_',i2.2,'_',a,'.nc')           ! <data_dir>/<data_prefix>_YYYY_MM_DD_<data_suffix_ice>.nc
-196 FORMAT(a,'/',a,'_',i4.4,'_',i2.2,'_',a,'.nc')                    ! <data_dir>/<data_prefix>_YYYY_MM_<data_suffix_ice>.nc
-197 FORMAT(a,'/',a,'_',i4.4,'_',i2.2,'_',i2.2,'.nc')                 ! <data_dir>/<data_prefix>_YYYY_MM_DD.nc
-198 FORMAT(a,'/',a,'_',i4.4,'_',i2.2,'.nc')                          ! <data_dir>/<data_prefix>_YYYY_MM.nc
-291 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,i2.2,i2.2,'_',a,'.nc')          ! <data_dir>/YYYY/<data_prefix>_YYYYMMDD_<data_suffix_ice>.nc
-292 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,i2.2,'_',a,'.nc')               ! <data_dir>/YYYY/<data_prefix>_YYYYMM_<data_suffix_ice>.nc
-293 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,i2.2,i2.2,'.nc')                ! <data_dir>/YYYY/<data_prefix>_YYYYMMDD.nc
-294 FORMAT(a,'/',i4.4,'/',a,'_',i4.4,i2.2,'.nc')                     ! <data_dir>/YYYY/<data_prefix>_YYYYMM.nc
-295 FORMAT(a,'/',a,'_',i4.4,i2.2,i2.2,'_',a,'.nc')                   ! <data_dir>/<data_prefix>_YYYYMMDD_<data_suffix_ice>.nc
-296 FORMAT(a,'/',a,'_',i4.4,i2.2,'_',a,'.nc')                        ! <data_dir>/<data_prefix>_YYYYMM_<data_suffix_ice>.nc
-297 FORMAT(a,'/',a,'_',i4.4,i2.2,i2.2,'.nc')                         ! <data_dir>/<data_prefix>_YYYYMMDD.nc
-298 FORMAT(a,'/',a,'_',i4.4,i2.2,'.nc')                              ! <data_dir>/<data_prefix>_YYYYMM.nc
+191 FORMAT(a,'/',i4.4,'/',a,i4.4,a,i2.2,a,i2.2,a,'.nc')  ! <data_dir>/YYYY/<data_prefix>YYYY<sep1>MM<sep2>DD<data_suffix>.nc  
+192 FORMAT(a,'/',i4.4,'/',a,i4.4,a,i2.2,a,'.nc')         ! <data_dir>/YYYY/<data_prefix>YYYY<sep1>MM<data_suffix>.nc  
+193 FORMAT(a,'/',a,i4.4,a,i2.2,a,i2.2,a,'.nc')           ! <data_dir>/<data_prefix>YYYY<sep1>MM<sep2>DD<data_suffix>.nc  
+194 FORMAT(a,'/',a,i4.4,a,i2.2,a,'.nc')                  ! <data_dir>/<data_prefix>YYYY<sep1>MM<data_suffix>.nc 
+
+ALLOCATE(list_fmt(4))
+list_fmt=(/191,192,193,194/)
 
 kyear=nn_yeari
 kmonth=1
 DO kday=1,31
 
-  ALLOCATE(list_fmt(16))
-  list_fmt=(/191,192,193,194,195,196,197,198,291,292,293,294,295,296,297,298/)
-
   do kfmt=1,size(list_fmt)
      nfmt=list_fmt(kfmt)
      SELECT CASE(nfmt)
         CASE(191)
-          write(file_in_icemod,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_ice)
+          write(file_in_icemod,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_ice)
         CASE(192)
-          write(file_in_icemod,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_ice) 
+          write(file_in_icemod,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_ice) 
         CASE(193)
-          write(file_in_icemod,193) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-        CASE(194) 
-          write(file_in_icemod,194) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-        CASE(195) 
-          write(file_in_icemod,195) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_ice)
-        CASE(196) 
-          write(file_in_icemod,196) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_ice)
-        CASE(197) 
-          write(file_in_icemod,197) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-        CASE(198)
-          write(file_in_icemod,198) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
-        CASE(291)
-          write(file_in_icemod,291) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_ice)
-        CASE(292)
-          write(file_in_icemod,292) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_ice) 
-        CASE(293)
-          write(file_in_icemod,293) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-        CASE(294) 
-          write(file_in_icemod,294) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-        CASE(295) 
-          write(file_in_icemod,295) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_ice)
-        CASE(296) 
-          write(file_in_icemod,296) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_ice)
-        CASE(297) 
-          write(file_in_icemod,297) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-        CASE(298)
-          write(file_in_icemod,298) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
+          write(file_in_icemod,193) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_ice)
+        CASE(194)
+          write(file_in_icemod,194) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_ice)
         CASE DEFAULT 
           write(*,*) 'wrong nfmt value >>>>>> stop !'
           stop
      END SELECT
+     write(*,*) 'Looking for existence of ', TRIM(file_in_icemod)
      inquire(file=file_in_icemod, exist=existfile)
-     if ( existfile ) exit
+     if ( existfile ) then; write(*,*) 'BINGO !'; exit ; endif
   enddo !-kfmt
 
   IF ( existfile ) THEN
@@ -299,18 +267,18 @@ DO kday=1,31
     status = NF90_INQ_DIMID(fidT,"time_counter",dimID_time) ; call erreur(status,.TRUE.,"inq_dimID_time")
     status = NF90_INQ_DIMID(fidT,"x",dimID_x)               ; call erreur(status,.TRUE.,"inq_dimID_x")
     status = NF90_INQ_DIMID(fidT,"y",dimID_y)               ; call erreur(status,.TRUE.,"inq_dimID_y")
-    status = NF90_INQ_DIMID(fidT,"z",dimID_deptht)
-    if (status .ne. 0) status = NF90_INQ_DIMID(fidT,"depth",dimID_deptht)
-    if (status .ne. 0) status = NF90_INQ_DIMID(fidT,"deptht",dimID_deptht)
-    call erreur(status,.TRUE.,"inq_dimID_deptht")
+    !status = NF90_INQ_DIMID(fidT,"z",dimID_deptht)
+    !if (status .ne. 0) status = NF90_INQ_DIMID(fidT,"depth",dimID_deptht)
+    !if (status .ne. 0) status = NF90_INQ_DIMID(fidT,"deptht",dimID_deptht)
+    !call erreur(status,.TRUE.,"inq_dimID_deptht")
 
     status = NF90_INQUIRE_DIMENSION(fidT,dimID_time,len=mtime)     ; call erreur(status,.TRUE.,"inq_dim_time")
     status = NF90_INQUIRE_DIMENSION(fidT,dimID_x,len=mlon)         ; call erreur(status,.TRUE.,"inq_dim_x")
     status = NF90_INQUIRE_DIMENSION(fidT,dimID_y,len=mlat)         ; call erreur(status,.TRUE.,"inq_dim_y")
-    status = NF90_INQUIRE_DIMENSION(fidT,dimID_deptht,len=mdeptht) ; call erreur(status,.TRUE.,"inq_dim_deptht")
+    !status = NF90_INQUIRE_DIMENSION(fidT,dimID_deptht,len=mdeptht) ; call erreur(status,.TRUE.,"inq_dim_deptht")
 
     ALLOCATE( nav_lon(mlon,mlat), nav_lat(mlon,mlat) )
-    ALLOCATE( deptht(mdeptht) )
+    !ALLOCATE( deptht(mdeptht) )
 
     status = NF90_INQ_VARID(fidT,"nav_lon",lon_ID)
     if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"lon",lon_ID)
@@ -320,15 +288,15 @@ DO kday=1,31
     if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"lat",lat_ID)
     if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"latitude",lat_ID)
     call erreur(status,.TRUE.,"inq_lat_ID")
-    status = NF90_INQ_VARID(fidT,"deptht",deptht_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"depth",depth_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"nav_lev",depth_ID)
-    if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"z",depth_ID)
-    call erreur(status,.TRUE.,"inq_deptht_ID")
+    !status = NF90_INQ_VARID(fidT,"deptht",deptht_ID)
+    !if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"depth",depth_ID)
+    !if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"nav_lev",depth_ID)
+    !if ( status .ne. 0 ) status = NF90_INQ_VARID(fidT,"z",depth_ID)
+    !call erreur(status,.TRUE.,"inq_deptht_ID")
         
     status = NF90_GET_VAR(fidT,lon_ID,nav_lon)                    ; call erreur(status,.TRUE.,"getvar_lon")
     status = NF90_GET_VAR(fidT,lat_ID,nav_lat)                    ; call erreur(status,.TRUE.,"getvar_lat")
-    status = NF90_GET_VAR(fidT,deptht_ID,deptht)                  ; call erreur(status,.TRUE.,"getvar_deptht")
+    !status = NF90_GET_VAR(fidT,deptht_ID,deptht)                  ; call erreur(status,.TRUE.,"getvar_deptht")
 
     status = NF90_CLOSE(fidT)                                     ; call erreur(status,.TRUE.,"fin_lecture")
 
@@ -351,7 +319,7 @@ write(command_str,888) TRIM(config_dir)
 CALL system(TRIM(command_str))
 
 !=================================================================================
-! 3- Process all SSH files over specified period
+! 5- Process all sea ice files over specified period
 !=================================================================================
 
 DO kyear=nn_yeari,nn_yearf
@@ -362,37 +330,13 @@ DO kyear=nn_yeari,nn_yearf
 
       SELECT CASE(nfmt)
         CASE(191)
-          write(file_in_icemod,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_ice)
+          write(file_in_icemod,191) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_ice)
         CASE(192)
-          write(file_in_icemod,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_ice) 
+          write(file_in_icemod,192) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_ice) 
         CASE(193)
-          write(file_in_icemod,193) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-        CASE(194) 
-          write(file_in_icemod,194) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-        CASE(195) 
-          write(file_in_icemod,195) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_ice)
-        CASE(196) 
-          write(file_in_icemod,196) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_ice)
-        CASE(197) 
-          write(file_in_icemod,197) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-        CASE(198)
-          write(file_in_icemod,198) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
-        CASE(291)
-          write(file_in_icemod,291) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_ice)
-        CASE(292)
-          write(file_in_icemod,292) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_ice) 
-        CASE(293)
-          write(file_in_icemod,293) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth, kday
-        CASE(294) 
-          write(file_in_icemod,294) TRIM(data_dir), kyear, TRIM(data_prefix), kyear, kmonth
-        CASE(295) 
-          write(file_in_icemod,295) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday, TRIM(data_suffix_ice)
-        CASE(296) 
-          write(file_in_icemod,296) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, TRIM(data_suffix_ice)
-        CASE(297) 
-          write(file_in_icemod,297) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth, kday
-        CASE(298)
-          write(file_in_icemod,298) TRIM(data_dir), TRIM(data_prefix), kyear, kmonth
+          write(file_in_icemod,193) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(sep2), kday, TRIM(data_suffix_ice)
+        CASE(194)
+          write(file_in_icemod,194) TRIM(data_dir), TRIM(data_prefix), kyear, TRIM(sep1), kmonth, TRIM(data_suffix_ice)
         CASE DEFAULT 
           write(*,*) 'wrong nfmt value >>>>>> stop !'
           stop
@@ -402,12 +346,10 @@ DO kyear=nn_yeari,nn_yearf
       IF ( existfile ) THEN
 
         ! output file format :
-        if     ( nfmt .eq. 191 .or. nfmt .eq. 193 .or. nfmt .eq. 195 .or. nfmt .eq. 197 &
-        &   .or. nfmt .eq. 291 .or. nfmt .eq. 293 .or. nfmt .eq. 295 .or. nfmt .eq. 297 ) then
+        if     ( nfmt .eq. 191 .or. nfmt .eq. 193 ) then
           401 FORMAT(a,'/BDY/bdyT_ice_',i4.4,'_',i2.2,'_',i2.2,'_',a,'.nc')
           write(file_bdy_icemod,401) TRIM(config_dir), kyear, kmonth, kday, TRIM(config)
-        elseif ( nfmt .eq. 192 .or. nfmt .eq. 194 .or. nfmt .eq. 196 .or. nfmt .eq. 198 &
-        &   .or. nfmt .eq. 292 .or. nfmt .eq. 294 .or. nfmt .eq. 296 .or. nfmt .eq. 298 ) then
+        elseif ( nfmt .eq. 192 .or. nfmt .eq. 194 ) then
           402 FORMAT(a,'/BDY/bdyT_ice_',i4.4,'_',i2.2,'_',a,'.nc')
           write(file_bdy_icemod,402) TRIM(config_dir), kyear, kmonth, TRIM(config)
         else
@@ -421,7 +363,7 @@ DO kyear=nn_yeari,nn_yearf
         ALLOCATE( time(mtime) )
         
         !---------------------------------------
-        ! Read input ssh :
+        ! Read input sea ice :
 
         write(*,*) 'Reading ice properties in ', TRIM(file_in_icemod)
         
@@ -572,11 +514,9 @@ DO kyear=nn_yeari,nn_yearf
         DEALLOCATE( ileadfra_bdy, iicethic_bdy, isnowthi_bdy )
 
         !--
-        if     ( nfmt .eq. 191 .or. nfmt .eq. 193 .or. nfmt .eq. 195 .or. nfmt .eq. 197 &
-        &   .or. nfmt .eq. 291 .or. nfmt .eq. 293 .or. nfmt .eq. 295 .or. nfmt .eq. 297 ) then
+        if     ( nfmt .eq. 191 .or. nfmt .eq. 193 ) then
           write(*,*) 'Looking for next existing day in this month/year'
-        elseif ( nfmt .eq. 192 .or. nfmt .eq. 194 .or. nfmt .eq. 196 .or. nfmt .eq. 198 &
-        &   .or. nfmt .eq. 292 .or. nfmt .eq. 294 .or. nfmt .eq. 296 .or. nfmt .eq. 298 ) then
+        elseif ( nfmt .eq. 192 .or. nfmt .eq. 194 ) then
           write(*,*) 'Only one file per month => switching to next month'
           exit
         else

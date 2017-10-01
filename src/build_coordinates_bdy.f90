@@ -4,7 +4,7 @@ program modif
 !
 ! Used to build netcdf coordinate file for BDY
 !
-! hisotry: - Feb. 2017: use of namelist and BDY definition by segments (N. Jourdain)
+! hisotry: - Feb. 2017: use of namelist
 !
 ! 0- Initializations
 ! 1- Read coordinates of the entire domain

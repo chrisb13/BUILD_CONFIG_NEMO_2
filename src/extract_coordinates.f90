@@ -192,9 +192,9 @@ status = NF90_DEF_VAR(fidCOORDreg,"glamv",NF90_DOUBLE,(/dimID_x,dimID_y/),glamv_
 status = NF90_DEF_VAR(fidCOORDreg,"glamu",NF90_DOUBLE,(/dimID_x,dimID_y/),glamu_ID); call erreur(status,.TRUE.,"def_var_glamu_ID")
 status = NF90_DEF_VAR(fidCOORDreg,"glamt",NF90_DOUBLE,(/dimID_x,dimID_y/),glamt_ID); call erreur(status,.TRUE.,"def_var_glamt_ID")
 
-status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"history","Created using extract_bathy_coord.f90")
+status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"history","Created using extract_coordinates.f90")
 call erreur(status,.TRUE.,"put_att_GLOB1")
-status = NF90_PUT_ATT(fidM,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
+status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"tools","https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2")
 call erreur(status,.TRUE.,"put_att_GLOBAL1")
 status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"imin_extraction",imin_GLO);  call erreur(status,.TRUE.,"put_att_GLOB3")
 status = NF90_PUT_ATT(fidCOORDreg,NF90_GLOBAL,"imax_extraction",imax_GLO);  call erreur(status,.TRUE.,"put_att_GLOB4")
