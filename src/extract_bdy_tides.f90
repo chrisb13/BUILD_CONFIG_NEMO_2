@@ -30,7 +30,7 @@ CHARACTER(LEN=150)                        :: config_dir, tide_dir
 INTEGER                                   :: nn_bdy_east, nn_bdy_west, nn_bdy_north, nn_bdy_south, nn_harm
 CHARACTER(LEN=4),ALLOCATABLE,DIMENSION(:) :: harm
 
-INTEGER :: fidELEV, fidUV, status, dimID_y, dimID_x, my, mx, lat_ID, lon_ID, Hg_ID, Ha_ID, Vg_ID, Va_ID, Ug_ID, Ua_ID,         & 
+INTEGER :: fidELEV, fidUV, status, dimID_y, dimID_x, my, mx, lat_ID, lon_ID, Hg_ID, Ha_ID, Vg_ID, Va_ID, Ug_ID, Ua_ID, knb,    & 
 &          fidCOORD, dimID_yb, dimID_xbt, dimID_xbu, dimID_xbv, myb, mxbt, mxbu, mxbv, glamt_ID, gphit_ID, glamu_ID, gphiu_ID, &
 &          glamv_ID, gphiv_ID, nbit_ID, nbjt_ID, nbrt_ID, nbiu_ID, nbju_ID, nbru_ID, nbiv_ID, nbjv_ID, nbrv_ID, z1_ID, z2_ID,  &
 &          u1_ID, u2_ID, v1_ID, v2_ID, fidG, dimIDG_x, dimIDG_y, dimIDG_z, dimIDG_t, mxG, myG, mzG, mtG, tmask_ID, umask_ID,   &
@@ -382,12 +382,6 @@ DO kharm=1,nn_harm
    enddo
    enddo
 
-   !where ( abs(Ha(:,:)) .lt. 1.e5 )
-   !  mskfes(:,:) = 1
-   !elsewhere
-   !  mskfes(:,:) = 0
-   !endwhere
-   
    !----------------------------------------------------------------------------------------
    
    write(*,*) 'Interpolation of z1 and z2'
@@ -397,99 +391,62 @@ DO kharm=1,nn_harm
    do kbdy=1,mxbt
    
      if ( tmask(nbit(kbdy,1),nbjt(kbdy,1),1,1) .ne. 0 ) then
-   
-        itmp=MINLOC(abs(zlon-zglamt(kbdy,1)),1)
-        if ( zlon(itmp) .lt. zglamt(kbdy,1) ) then
-          iinf=itmp
-          isup=itmp+1
-        else
-          iinf=itmp-1
-          isup=itmp
-        endif
-      
-        jtmp=MINLOC(abs(lat-gphit(kbdy,1)),1)
-        if ( lat(jtmp) .lt. gphit(kbdy,1) ) then
-          jinf=jtmp
-          jsup=jtmp+1
-        else
-          jinf=jtmp-1
-          jsup=jtmp
-        endif
-      
-        Ha_bdy =   ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * Ha(iinf,jinf) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * Ha(iinf,jsup) * mskfes(iinf,jsup)  &
-        &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * Ha(isup,jinf) * mskfes(isup,jinf)  &
-        &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * Ha(isup,jsup) * mskfes(isup,jsup)
-      
-        Hcs =      ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * COS(zrad*Hg(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * COS(zrad*Hg(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * COS(zrad*Hg(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * COS(zrad*Hg(isup,jsup)) * mskfes(isup,jsup)
-     
-        Hsn =      ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * SIN(zrad*Hg(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * SIN(zrad*Hg(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * SIN(zrad*Hg(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * SIN(zrad*Hg(isup,jsup)) * mskfes(isup,jsup)
  
-        div =   ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * mskfes(iinf,jinf)  &
-          &   + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * mskfes(iinf,jsup)  &
-          &   + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * mskfes(isup,jinf)  &
-          &   + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * mskfes(isup,jsup)
-      
-        if ( abs(div) .gt. 1.e-12 ) then
-
-          Ha_bdy = Ha_bdy / div
-          Hg_bdy = ATAN2( Hsn/div, Hcs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
+       itmp=MINLOC(abs(zlon-zglamt(kbdy,1)),1)
+       jtmp=MINLOC(abs(lat-gphit(kbdy,1)),1)
  
-       else
-
-          if ( zlon(itmp) .lt. zglamt(kbdy,1) ) then
-            iinf=itmp-1
-            isup=itmp+2
-          else
-            iinf=itmp-2
-            isup=itmp+1
-          endif
-        
-          if ( lat(jtmp) .lt. gphit(kbdy,1) ) then
-            jinf=jtmp-1
-            jsup=jtmp+2
-          else
-            jinf=jtmp-2
-            jsup=jtmp+1
-          endif
-        
-          Ha_bdy =   ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * Ha(iinf,jinf) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * Ha(iinf,jsup) * mskfes(iinf,jsup)  &
-          &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * Ha(isup,jinf) * mskfes(isup,jinf)  &
-          &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * Ha(isup,jsup) * mskfes(isup,jsup)
+       do knb=1,10 ! looking for closest neighbour (knb=1), then expand if not found
+  
+         if ( zlon(itmp) .lt. zglamt(kbdy,1) ) then
+           iinf=itmp-knb+1
+           isup=itmp+knb
+         else
+           iinf=itmp-knb
+           isup=itmp+knb-1
+         endif
        
-          Hcs  =     ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * COS(zrad*Hg(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * COS(zrad*Hg(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * COS(zrad*Hg(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * COS(zrad*Hg(isup,jsup)) * mskfes(isup,jsup)
-
-          Hsn  =     ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * SIN(zrad*Hg(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * SIN(zrad*Hg(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * SIN(zrad*Hg(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * SIN(zrad*Hg(isup,jsup)) * mskfes(isup,jsup)
- 
-          div =   ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * mskfes(iinf,jinf)  &
-            &   + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * mskfes(iinf,jsup)  &
-            &   + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * mskfes(isup,jinf)  &
-            &   + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * mskfes(isup,jsup)
-        
-          if ( abs(div) .gt. 1.e-12 ) then
-            Ha_bdy = Ha_bdy / div
-            Hg_bdy = ATAN2( Hsn/div, Hcs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
-          else
-            write(*,*) '~!@#$%^ ADAPT THE CODE FOR MISSING NEIGHBOURS (bdyT)  >>>>>>>>>>  stop !!'
-            write(*,*) kbdy, iinf, jinf, Ha_bdy, Hcs, Hsn
-            stop
-          endif
-
-        endif
+         if ( lat(jtmp) .lt. gphit(kbdy,1) ) then
+           jinf=jtmp-knb+1
+           jsup=jtmp+knb
+         else
+           jinf=jtmp-knb
+           jsup=jtmp+knb-1
+         endif
+       
+         Ha_bdy =   ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * Ha(iinf,jinf) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * Ha(iinf,jsup) * mskfes(iinf,jsup)  &
+         &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * Ha(isup,jinf) * mskfes(isup,jinf)  &
+         &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * Ha(isup,jsup) * mskfes(isup,jsup)
+       
+         Hcs =      ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * COS(zrad*Hg(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * COS(zrad*Hg(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * COS(zrad*Hg(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * COS(zrad*Hg(isup,jsup)) * mskfes(isup,jsup)
       
+         Hsn =      ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * SIN(zrad*Hg(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * SIN(zrad*Hg(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * SIN(zrad*Hg(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * SIN(zrad*Hg(isup,jsup)) * mskfes(isup,jsup)
+  
+         div =   ( zlon(isup) - zglamt(kbdy,1) ) * ( lat(jsup) - gphit(kbdy,1) ) * mskfes(iinf,jinf)  &
+         &     + ( zlon(isup) - zglamt(kbdy,1) ) * ( gphit(kbdy,1) - lat(jinf) ) * mskfes(iinf,jsup)  &
+         &     + ( zglamt(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphit(kbdy,1) ) * mskfes(isup,jinf)  &
+         &     + ( zglamt(kbdy,1) - zlon(iinf) ) * ( gphit(kbdy,1) - lat(jinf) ) * mskfes(isup,jsup)
+       
+         if ( abs(div) .gt. 1.e-12 ) then
+           Ha_bdy = Ha_bdy / div
+           Hg_bdy = ATAN2( Hsn/div, Hcs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
+           exit
+         endif
+
+       enddo
+ 
+       if ( .not. abs(div) .gt. 1.e-12 ) then
+         write(*,*) '~!@#$%^ INCREASE NB OF LOOPS ON knb (bdyT)  >>>>>>>>>>  stop !!'
+         write(*,*) kbdy, iinf, jinf, Ha_bdy, Hcs, Hsn
+         stop
+       endif
+
      else
     
         Ha_bdy = 0.0
@@ -512,140 +469,82 @@ DO kharm=1,nn_harm
    
      if ( umask(nbiu(kbdy,1),nbju(kbdy,1),1,1) .ne. 0 ) then
    
-        itmp=MINLOC(abs(zlon-zglamu(kbdy,1)),1)
-        if ( zlon(itmp) .lt. zglamu(kbdy,1) ) then
-          iinf=itmp
-          isup=itmp+1
-        else
-          iinf=itmp-1
-          isup=itmp
-        endif
-      
-        jtmp=MINLOC(abs(lat-gphiu(kbdy,1)),1)
-        if ( lat(jtmp) .lt. gphiu(kbdy,1) ) then
-          jinf=jtmp
-          jsup=jtmp+1
-        else
-          jinf=jtmp-1
-          jsup=jtmp
-        endif
-      
-        Ua_bdy =   ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Ua(iinf,jinf) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Ua(iinf,jsup) * mskfes(iinf,jsup)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Ua(isup,jinf) * mskfes(isup,jinf)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Ua(isup,jsup) * mskfes(isup,jsup)
-      
-        Ucs =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
-    
-        Usn =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
+       itmp=MINLOC(abs(zlon-zglamu(kbdy,1)),1)
+       jtmp=MINLOC(abs(lat-gphiu(kbdy,1)),1)
  
-        Va_bdy =   ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Va(iinf,jinf) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Va(iinf,jsup) * mskfes(iinf,jsup)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Va(isup,jinf) * mskfes(isup,jinf)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Va(isup,jsup) * mskfes(isup,jsup)
-      
-        Vcs =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
-
-        Vsn =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
-
-        tmp1  = gphiu_REG( MIN(mxG,nbiu(kbdy,1)+1), nbju(kbdy,1) ) - gphiu_REG( MAX(1,nbiu(kbdy,1)-1), nbju(kbdy,1) )
-        tmp2  = ( zglamu_REG( MIN(mxG,nbiu(kbdy,1)+1), nbju(kbdy,1) ) - zglamu_REG( MAX(1,nbiu(kbdy,1)-1), nbju(kbdy,1) ) ) * cos( zrad * gphiu_REG(nbiu(kbdy,1),nbju(kbdy,1)) )
-        angle = ATAN2( tmp1, tmp2 )
-
-        div =   ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * mskfes(iinf,jinf)  &
-          &   + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * mskfes(iinf,jsup)  &
-          &   + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * mskfes(isup,jinf)  &
-          &   + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * mskfes(isup,jsup)
-      
-        if ( abs(div) .gt. 1.e-12 ) then
-
-          Ua_bdy = Ua_bdy / div
-          Ug_bdy = ATAN2( Usn/div, Ucs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
-          Va_bdy = Va_bdy / div
-          Vg_bdy = ATAN2( Vsn/div, Vcs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
-
-        else
-
-          if ( zlon(itmp) .lt. zglamu(kbdy,1) ) then
-            iinf=itmp-1
-            isup=itmp+2
-          else
-            iinf=itmp-2
-            isup=itmp+1
-          endif
-        
-          if ( lat(jtmp) .lt. gphiu(kbdy,1) ) then
-            jinf=jtmp-1
-            jsup=jtmp+2
-          else
-            jinf=jtmp-2
-            jsup=jtmp+1
-          endif
-        
-          Ua_bdy =   ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Ua(iinf,jinf) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Ua(iinf,jsup) * mskfes(iinf,jsup)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Ua(isup,jinf) * mskfes(isup,jinf)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Ua(isup,jsup) * mskfes(isup,jsup)
-        
-          Ucs =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
-      
-          Usn =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
- 
-          Va_bdy =   ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Va(iinf,jinf) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Va(iinf,jsup) * mskfes(iinf,jsup)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Va(isup,jinf) * mskfes(isup,jinf)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Va(isup,jsup) * mskfes(isup,jsup)
-        
-          Vcs =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
-
-          Vsn =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
- 
-          div =   ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * mskfes(iinf,jinf)  &
-            &   + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * mskfes(iinf,jsup)  &
-            &   + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * mskfes(isup,jinf)  &
-            &   + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * mskfes(isup,jsup)
+       do knb=1,10 ! looking for closest neighbour (knb=1), then expand if not found
   
-          tmp1  = gphiu_REG( MIN(mxG,nbiu(kbdy,1)+1), nbju(kbdy,1) ) - gphiu_REG( MAX(1,nbiu(kbdy,1)-1), nbju(kbdy,1) )
-          tmp2  = ( zglamu_REG( MIN(mxG,nbiu(kbdy,1)+1), nbju(kbdy,1) ) - zglamu_REG( MAX(1,nbiu(kbdy,1)-1), nbju(kbdy,1) ) ) * cos( zrad * gphiu_REG(nbiu(kbdy,1),nbju(kbdy,1)) )
-          angle = ATAN2( tmp1, tmp2 )
- 
-          if ( abs(div) .gt. 1.e-12 ) then
-            Ua_bdy = Ua_bdy / div
-            Ug_bdy = ATAN2( Usn/div, Ucs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
-            Va_bdy = Va_bdy / div
-            Vg_bdy = ATAN2( Vsn/div, Vcs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
-          else
-            write(*,*) '@@@@@@@ ADAPT THE CODE FOR MISSING NEIGHBOURS (bdyU) >>>>>>>>>>  stop !!'
-            write(*,*) kbdy, iinf, jinf, Ua_bdy, Ug_bdy
-            stop
-          endif
+         if ( zlon(itmp) .lt. zglamu(kbdy,1) ) then
+           iinf=itmp-knb+1
+           isup=itmp+knb
+         else
+           iinf=itmp-knb
+           isup=itmp+knb-1
+         endif
        
-        endif
-      
+         if ( lat(jtmp) .lt. gphiu(kbdy,1) ) then
+           jinf=jtmp-knb+1
+           jsup=jtmp+knb
+         else
+           jinf=jtmp-knb
+           jsup=jtmp+knb-1
+         endif
+
+         Ua_bdy =   ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Ua(iinf,jinf) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Ua(iinf,jsup) * mskfes(iinf,jsup)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Ua(isup,jinf) * mskfes(isup,jinf)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Ua(isup,jsup) * mskfes(isup,jsup)
+       
+         Ucs =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
+     
+         Usn =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
+  
+         Va_bdy =   ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Va(iinf,jinf) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Va(iinf,jsup) * mskfes(iinf,jsup)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * Va(isup,jinf) * mskfes(isup,jinf)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * Va(isup,jsup) * mskfes(isup,jsup)
+       
+         Vcs =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * COS(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
+ 
+         Vsn =      ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * SIN(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
+ 
+         tmp1  = gphiu_REG( MIN(mxG,nbiu(kbdy,1)+1), nbju(kbdy,1) ) - gphiu_REG( MAX(1,nbiu(kbdy,1)-1), nbju(kbdy,1) )
+         tmp2  = ( zglamu_REG( MIN(mxG,nbiu(kbdy,1)+1), nbju(kbdy,1) ) - zglamu_REG( MAX(1,nbiu(kbdy,1)-1), nbju(kbdy,1) ) ) * cos( zrad * gphiu_REG(nbiu(kbdy,1),nbju(kbdy,1)) )
+         angle = ATAN2( tmp1, tmp2 )
+ 
+         div =   ( zlon(isup) - zglamu(kbdy,1) ) * ( lat(jsup) - gphiu(kbdy,1) ) * mskfes(iinf,jinf)  &
+           &   + ( zlon(isup) - zglamu(kbdy,1) ) * ( gphiu(kbdy,1) - lat(jinf) ) * mskfes(iinf,jsup)  &
+           &   + ( zglamu(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiu(kbdy,1) ) * mskfes(isup,jinf)  &
+           &   + ( zglamu(kbdy,1) - zlon(iinf) ) * ( gphiu(kbdy,1) - lat(jinf) ) * mskfes(isup,jsup)
+       
+         if ( abs(div) .gt. 1.e-12 ) then
+           Ua_bdy = Ua_bdy / div
+           Ug_bdy = ATAN2( Usn/div, Ucs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
+           Va_bdy = Va_bdy / div
+           Vg_bdy = ATAN2( Vsn/div, Vcs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
+           exit
+         endif
+
+       enddo  !- knb
+
+       if ( .not. abs(div) .gt. 1.e-12 ) then
+         write(*,*) '@@@@@@@ INCREASE NB OF LOOPS ON knb (bdyU) >>>>>>>>>>  stop !!'
+         write(*,*) kbdy, iinf, jinf, Ua_bdy, Ug_bdy
+         stop
+       endif
+       
      else
     
         Ua_bdy = 0.0
@@ -674,141 +573,83 @@ DO kharm=1,nn_harm
    do kbdy=1,mxbv
    
      if ( vmask(nbiv(kbdy,1),nbjv(kbdy,1),1,1) .ne. 0 ) then
-   
-        itmp=MINLOC(abs(zlon-zglamv(kbdy,1)),1)
-        if ( zlon(itmp) .lt. zglamv(kbdy,1) ) then
-          iinf=itmp
-          isup=itmp+1
-        else
-          iinf=itmp-1
-          isup=itmp
-        endif
-      
-        jtmp=MINLOC(abs(lat-gphiv(kbdy,1)),1)
-        if ( lat(jtmp) .lt. gphiv(kbdy,1) ) then
-          jinf=jtmp
-          jsup=jtmp+1
-        else
-          jinf=jtmp-1
-          jsup=jtmp
-        endif
-     
-        Ua_bdy =   ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Ua(iinf,jinf) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Ua(iinf,jsup) * mskfes(iinf,jsup)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Ua(isup,jinf) * mskfes(isup,jinf)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Ua(isup,jsup) * mskfes(isup,jsup)
-      
-        Ucs =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
-
-        Usn =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
+  
+       itmp=MINLOC(abs(zlon-zglamv(kbdy,1)),1)
+       jtmp=MINLOC(abs(lat-gphiv(kbdy,1)),1)
  
-        Va_bdy =   ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Va(iinf,jinf) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Va(iinf,jsup) * mskfes(iinf,jsup)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Va(isup,jinf) * mskfes(isup,jinf)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Va(isup,jsup) * mskfes(isup,jsup)
-      
-        Vcs =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
-
-        Vsn =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
-        &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
-        &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
-
-        angle  = ATAN2(    gphiv_REG( MIN(mxG,nbiv(kbdy,1)+1), nbjv(kbdy,1) ) -  gphiv_REG( MAX(1,nbiv(kbdy,1)-1), nbjv(kbdy,1) )  , &
-        &               ( zglamv_REG( MIN(mxG,nbiv(kbdy,1)+1), nbjv(kbdy,1) ) - zglamv_REG( MAX(1,nbiv(kbdy,1)-1), nbjv(kbdy,1) ) )  &
-        &               * cos( zrad * gphiv_REG(nbiv(kbdy,1),nbjv(kbdy,1)) )  ) 
-
-        div =   ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * mskfes(iinf,jinf)  &
-          &   + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * mskfes(iinf,jsup)  &
-          &   + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * mskfes(isup,jinf)  &
-          &   + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * mskfes(isup,jsup)
-      
-        if ( abs(div) .gt. 1.e-12 ) then
-
-          Ua_bdy = Ua_bdy / div
-          Ug_bdy = ATAN2( Usn/div, Ucs/div ) / zrad !- to have a proper "modulo" interpolation of the phase 
-          Va_bdy = Va_bdy / div
-          Vg_bdy = ATAN2( Vsn/div, Vcs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
-
-        else
-
-          if ( zlon(itmp) .lt. zglamv(kbdy,1) ) then
-            iinf=itmp-1
-            isup=itmp+2
-          else
-            iinf=itmp-2
-            isup=itmp+1
-          endif
-        
-          if ( lat(jtmp) .lt. gphiv(kbdy,1) ) then
-            jinf=jtmp-1
-            jsup=jtmp+2
-          else
-            jinf=jtmp-2
-            jsup=jtmp+1
-          endif
+       do knb=1,10 ! looking for closest neighbour (knb=1), then expand if not found
+  
+         if ( zlon(itmp) .lt. zglamv(kbdy,1) ) then
+           iinf=itmp-knb+1
+           isup=itmp+knb
+         else
+           iinf=itmp-knb
+           isup=itmp+knb-1
+         endif
        
-          Ua_bdy =   ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Ua(iinf,jinf) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Ua(iinf,jsup) * mskfes(iinf,jsup)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Ua(isup,jinf) * mskfes(isup,jinf)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Ua(isup,jsup) * mskfes(isup,jsup)
-        
-          Ucs =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
-        
-          Usn =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
+         if ( lat(jtmp) .lt. gphiv(kbdy,1) ) then
+           jinf=jtmp-knb+1
+           jsup=jtmp+knb
+         else
+           jinf=jtmp-knb
+           jsup=jtmp+knb-1
+         endif
+
+         Ua_bdy =   ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Ua(iinf,jinf) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Ua(iinf,jsup) * mskfes(iinf,jsup)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Ua(isup,jinf) * mskfes(isup,jinf)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Ua(isup,jsup) * mskfes(isup,jsup)
+       
+         Ucs =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
  
-          Va_bdy =   ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Va(iinf,jinf) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Va(iinf,jsup) * mskfes(iinf,jsup)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Va(isup,jinf) * mskfes(isup,jinf)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Va(isup,jsup) * mskfes(isup,jsup)
-        
-          Vcs =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
-        
-          Vsn =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
-          &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
-          &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
-      
-          angle  = ATAN2(    gphiv_REG( MIN(mxG,nbiv(kbdy,1)+1), nbjv(kbdy,1) ) -  gphiv_REG( MAX(1,nbiv(kbdy,1)-1), nbjv(kbdy,1) )  , &
-          &               ( zglamv_REG( MIN(mxG,nbiv(kbdy,1)+1), nbjv(kbdy,1) ) - zglamv_REG( MAX(1,nbiv(kbdy,1)-1), nbjv(kbdy,1) ) )  &
-          &               * cos( zrad * gphiv_REG(nbiv(kbdy,1),nbjv(kbdy,1)) )  ) 
+         Usn =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Ug(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Ug(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Ug(isup,jsup)) * mskfes(isup,jsup)
+  
+         Va_bdy =   ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Va(iinf,jinf) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Va(iinf,jsup) * mskfes(iinf,jsup)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * Va(isup,jinf) * mskfes(isup,jinf)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * Va(isup,jsup) * mskfes(isup,jsup)
+       
+         Vcs =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * COS(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * COS(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
+ 
+         Vsn =      ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Vg(iinf,jinf)) * mskfes(iinf,jinf)  &
+         &        + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(iinf,jsup)) * mskfes(iinf,jsup)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * SIN(zrad*Vg(isup,jinf)) * mskfes(isup,jinf)  &
+         &        + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * SIN(zrad*Vg(isup,jsup)) * mskfes(isup,jsup)
+ 
+         angle  = ATAN2(    gphiv_REG( MIN(mxG,nbiv(kbdy,1)+1), nbjv(kbdy,1) ) -  gphiv_REG( MAX(1,nbiv(kbdy,1)-1), nbjv(kbdy,1) )  , &
+         &               ( zglamv_REG( MIN(mxG,nbiv(kbdy,1)+1), nbjv(kbdy,1) ) - zglamv_REG( MAX(1,nbiv(kbdy,1)-1), nbjv(kbdy,1) ) )  &
+         &               * cos( zrad * gphiv_REG(nbiv(kbdy,1),nbjv(kbdy,1)) )  ) 
+ 
+         div =   ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * mskfes(iinf,jinf)  &
+           &   + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * mskfes(iinf,jsup)  &
+           &   + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * mskfes(isup,jinf)  &
+           &   + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * mskfes(isup,jsup)
+       
+         if ( abs(div) .gt. 1.e-12 ) then
+           Ua_bdy = Ua_bdy / div
+           Ug_bdy = ATAN2( Usn/div, Ucs/div ) / zrad !- to have a proper "modulo" interpolation of the phase 
+           Va_bdy = Va_bdy / div
+           Vg_bdy = ATAN2( Vsn/div, Vcs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
+           exit
+         endif
 
-          div =   ( zlon(isup) - zglamv(kbdy,1) ) * ( lat(jsup) - gphiv(kbdy,1) ) * mskfes(iinf,jinf)  &
-            &   + ( zlon(isup) - zglamv(kbdy,1) ) * ( gphiv(kbdy,1) - lat(jinf) ) * mskfes(iinf,jsup)  &
-            &   + ( zglamv(kbdy,1) - zlon(iinf) ) * ( lat(jsup) - gphiv(kbdy,1) ) * mskfes(isup,jinf)  &
-            &   + ( zglamv(kbdy,1) - zlon(iinf) ) * ( gphiv(kbdy,1) - lat(jinf) ) * mskfes(isup,jsup)
-        
-          if ( abs(div) .gt. 1.e-12 ) then
-            Ua_bdy = Ua_bdy / div
-            Ug_bdy = ATAN2( Usn/div, Ucs/div ) / zrad !- to have a proper "modulo" interpolation of the phase 
-            Va_bdy = Va_bdy / div
-            Vg_bdy = ATAN2( Vsn/div, Vcs/div ) / zrad !- to have a proper "modulo" interpolation of the phase
-          else
-            write(*,*) '~!@#$%^ ADAPT THE CODE FOR MISSING NEIGHBOURS (bdyV)  >>>>>>>>>>  stop !!'
-            write(*,*) kbdy, iinf, jinf, Va_bdy, Vg_bdy
-            stop
-          endif
+       enddo !- knb
 
-        endif
-      
+       if ( .not. abs(div) .gt. 1.e-12 ) then
+         write(*,*) '~!@#$%^ INCREASE NB OF LOOPS ON knb (bdyV)  >>>>>>>>>>  stop !!'
+         write(*,*) kbdy, iinf, jinf, Va_bdy, Vg_bdy
+         stop
+       endif
+
      else
     
         Ua_bdy = 0.0
