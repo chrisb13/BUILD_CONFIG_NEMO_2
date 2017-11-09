@@ -440,7 +440,7 @@ DO jREG=1,my_REG
   if     ( zzjt(iREG,jREG)+1 .gt. my_GLO ) then
     zzjtp1(iREG,jREG) = zzjt(iREG,jREG)
     zzjtm1(iREG,jREG) = zzjt(iREG,jREG) - 1
-  elseif ( zzit(iREG,jREG)-1 .lt. 1     ) then
+  elseif ( zzjt(iREG,jREG)-1 .lt. 1     ) then
     zzjtp1(iREG,jREG) = zzjt(iREG,jREG) + 1
     zzjtm1(iREG,jREG) = zzjt(iREG,jREG)
   else
@@ -558,7 +558,7 @@ DO jREG=1,my_REG
   if     ( zzjf(iREG,jREG)+1 .gt. my_GLO ) then
     zzjfp1(iREG,jREG) = zzjf(iREG,jREG)
     zzjfm1(iREG,jREG) = zzjf(iREG,jREG) - 1
-  elseif ( zzif(iREG,jREG)-1 .lt. 1     ) then
+  elseif ( zzjf(iREG,jREG)-1 .lt. 1     ) then
     zzjfp1(iREG,jREG) = zzjf(iREG,jREG) + 1
     zzjfm1(iREG,jREG) = zzjf(iREG,jREG)
   else
@@ -676,7 +676,7 @@ DO jREG=1,my_REG
   if     ( zzju(iREG,jREG)+1 .gt. my_GLO ) then
     zzjup1(iREG,jREG) = zzju(iREG,jREG)
     zzjum1(iREG,jREG) = zzju(iREG,jREG) - 1
-  elseif ( zziu(iREG,jREG)-1 .lt. 1     ) then
+  elseif ( zzju(iREG,jREG)-1 .lt. 1     ) then
     zzjup1(iREG,jREG) = zzju(iREG,jREG) + 1
     zzjum1(iREG,jREG) = zzju(iREG,jREG)
   else
@@ -794,7 +794,7 @@ DO jREG=1,my_REG
   if     ( zzjv(iREG,jREG)+1 .gt. my_GLO ) then
     zzjvp1(iREG,jREG) = zzjv(iREG,jREG)
     zzjvm1(iREG,jREG) = zzjv(iREG,jREG) - 1
-  elseif ( zziv(iREG,jREG)-1 .lt. 1     ) then
+  elseif ( zzjv(iREG,jREG)-1 .lt. 1     ) then
     zzjvp1(iREG,jREG) = zzjv(iREG,jREG) + 1
     zzjvm1(iREG,jREG) = zzjv(iREG,jREG)
   else
