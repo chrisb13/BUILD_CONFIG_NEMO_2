@@ -470,7 +470,8 @@ DO jREG=1,my_REG
   endif     
 
   !------------------------------------------------------------
-  if ( zglamtREG(iREG,jREG) .ge. zglamtGLO(zzit(iREG,jREG),zzjt(iREG,jREG)) )  then
+  if (       zglamtREG(iREG,jREG) .ge. zglamtGLO(zzit(iREG,jREG),zzjt(iREG,jREG)) & 
+  &    .and. zglamtGLO(zzitp1(iREG,jREG),zzjt(iREG,jREG)) .ge. zglamtGLO(zzitm1(iREG,jREG),zzjt(iREG,jREG)) )  then
     ziWt(iREG,jREG)   = zzit  (iREG,jREG) ! closest point westward
     ziEt(iREG,jREG)   = zzitp1(iREG,jREG) ! closest point eastward
   else
@@ -478,7 +479,8 @@ DO jREG=1,my_REG
     ziEt(iREG,jREG)   = zzit  (iREG,jREG) ! closest point eastward
   endif
   !--
-  if ( gphitREG(iREG,jREG) .ge. gphitGLO(zzit(iREG,jREG),zzjt(iREG,jREG)) )  then
+  if (       gphitREG(iREG,jREG) .ge. gphitGLO(zzit(iREG,jREG),zzjt(iREG,jREG)) &
+  &    .and. gphitGLO(zzit(iREG,jREG),zzjtp1(iREG,jREG)) .ge. gphitGLO(zzit(iREG,jREG),zzjtm1(iREG,jREG)) )  then
     zjSt(iREG,jREG)   = zzjt  (iREG,jREG) ! closest point southward
     zjNt(iREG,jREG)   = zzjtp1(iREG,jREG) ! closest point northward
   else
@@ -486,14 +488,14 @@ DO jREG=1,my_REG
     zjNt(iREG,jREG)   = zzjt  (iREG,jREG) ! closest point northward
   endif
   !--
-  distSW = sqrt(   ( cos(rad*gphitREG(iREG,jREG)) * ( zglamtREG(iREG,jREG) - zglamtGLO(ziWt(iREG,jREG),zjSt(iREG,jREG)) ) )**2  &
-      &          + (                                     gphitREG(iREG,jREG) -  gphitGLO(ziWt(iREG,jREG),zjSt(iREG,jREG)) )**2  )
-  distSE = sqrt(   ( cos(rad*gphitREG(iREG,jREG)) * ( zglamtREG(iREG,jREG) - zglamtGLO(ziEt(iREG,jREG),zjSt(iREG,jREG)) ) )**2  &
-      &          + (                                     gphitREG(iREG,jREG) -  gphitGLO(ziEt(iREG,jREG),zjSt(iREG,jREG)) )**2  )
-  distNW = sqrt(   ( cos(rad*gphitREG(iREG,jREG)) * ( zglamtREG(iREG,jREG) - zglamtGLO(ziWt(iREG,jREG),zjNt(iREG,jREG)) ) )**2  &
-      &          + (                                     gphitREG(iREG,jREG) -  gphitGLO(ziWt(iREG,jREG),zjNt(iREG,jREG)) )**2  )
-  distNE = sqrt(   ( cos(rad*gphitREG(iREG,jREG)) * ( zglamtREG(iREG,jREG) - zglamtGLO(ziEt(iREG,jREG),zjNt(iREG,jREG)) ) )**2  &
-      &          + (                                     gphitREG(iREG,jREG) -  gphitGLO(ziEt(iREG,jREG),zjNt(iREG,jREG)) )**2  )
+  !distSW = sqrt(   ( cos(rad*gphitREG(iREG,jREG)) * ( zglamtREG(iREG,jREG) - zglamtGLO(ziWt(iREG,jREG),zjSt(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphitREG(iREG,jREG) -  gphitGLO(ziWt(iREG,jREG),zjSt(iREG,jREG)) )**2  )
+  !distSE = sqrt(   ( cos(rad*gphitREG(iREG,jREG)) * ( zglamtREG(iREG,jREG) - zglamtGLO(ziEt(iREG,jREG),zjSt(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphitREG(iREG,jREG) -  gphitGLO(ziEt(iREG,jREG),zjSt(iREG,jREG)) )**2  )
+  !distNW = sqrt(   ( cos(rad*gphitREG(iREG,jREG)) * ( zglamtREG(iREG,jREG) - zglamtGLO(ziWt(iREG,jREG),zjNt(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphitREG(iREG,jREG) -  gphitGLO(ziWt(iREG,jREG),zjNt(iREG,jREG)) )**2  )
+  !distNE = sqrt(   ( cos(rad*gphitREG(iREG,jREG)) * ( zglamtREG(iREG,jREG) - zglamtGLO(ziEt(iREG,jREG),zjNt(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphitREG(iREG,jREG) -  gphitGLO(ziEt(iREG,jREG),zjNt(iREG,jREG)) )**2  )
   !--
   wgSWt(iREG,jREG) =   ( zglamtGLO(ziEt(iREG,jREG),zjNt(iREG,jREG)) - zglamtREG(iREG,jREG) ) &
   &                  * (  gphitGLO(ziEt(iREG,jREG),zjNt(iREG,jREG)) -  gphitREG(iREG,jREG) )
@@ -588,7 +590,8 @@ DO jREG=1,my_REG
   endif     
 
   !------------------------------------------------------------
-  if ( zglamfREG(iREG,jREG) .ge. zglamfGLO(zzif(iREG,jREG),zzjt(iREG,jREG)) )  then
+  if ( zglamfREG(iREG,jREG) .ge. zglamfGLO(zzif(iREG,jREG),zzjf(iREG,jREG)) &
+  &    .and. zglamfGLO(zzifp1(iREG,jREG),zzjf(iREG,jREG)) .ge. zglamfGLO(zzifm1(iREG,jREG),zzjf(iREG,jREG)) )  then
     ziWf(iREG,jREG)   = zzif  (iREG,jREG) ! closest point westward
     ziEf(iREG,jREG)   = zzifp1(iREG,jREG) ! closest point eastward
   else
@@ -596,22 +599,23 @@ DO jREG=1,my_REG
     ziEf(iREG,jREG)   = zzif  (iREG,jREG) ! closest point eastward
   endif
   !--
-  if ( gphifREG(iREG,jREG) .ge. gphifGLO(zzif(iREG,jREG),zzjt(iREG,jREG)) )  then
-    zjSf(iREG,jREG)   = zzjt  (iREG,jREG) ! closest point southward
-    zjNf(iREG,jREG)   = zzjtp1(iREG,jREG) ! closest point northward
+  if ( gphifREG(iREG,jREG) .ge. gphifGLO(zzif(iREG,jREG),zzjf(iREG,jREG)) &
+  &    .and. gphifGLO(zzif(iREG,jREG),zzjfp1(iREG,jREG)) .ge. gphifGLO(zzif(iREG,jREG),zzjfm1(iREG,jREG)) )  then
+    zjSf(iREG,jREG)   = zzjf  (iREG,jREG) ! closest point southward
+    zjNf(iREG,jREG)   = zzjfp1(iREG,jREG) ! closest point northward
   else
-    zjSf(iREG,jREG)   = zzjtm1(iREG,jREG) ! closest point southward
-    zjNf(iREG,jREG)   = zzjt  (iREG,jREG) ! closest point northward
+    zjSf(iREG,jREG)   = zzjfm1(iREG,jREG) ! closest point southward
+    zjNf(iREG,jREG)   = zzjf  (iREG,jREG) ! closest point northward
   endif
   !--
-  distSW = sqrt(   ( cos(rad*gphifREG(iREG,jREG)) * ( zglamfREG(iREG,jREG) - zglamfGLO(ziWf(iREG,jREG),zjSf(iREG,jREG)) ) )**2  &
-      &          + (                                     gphifREG(iREG,jREG) -  gphifGLO(ziWf(iREG,jREG),zjSf(iREG,jREG)) )**2  )
-  distSE = sqrt(   ( cos(rad*gphifREG(iREG,jREG)) * ( zglamfREG(iREG,jREG) - zglamfGLO(ziEf(iREG,jREG),zjSf(iREG,jREG)) ) )**2  &
-      &          + (                                     gphifREG(iREG,jREG) -  gphifGLO(ziEf(iREG,jREG),zjSf(iREG,jREG)) )**2  )
-  distNW = sqrt(   ( cos(rad*gphifREG(iREG,jREG)) * ( zglamfREG(iREG,jREG) - zglamfGLO(ziWf(iREG,jREG),zjNf(iREG,jREG)) ) )**2  &
-      &          + (                                     gphifREG(iREG,jREG) -  gphifGLO(ziWf(iREG,jREG),zjNf(iREG,jREG)) )**2  )
-  distNE = sqrt(   ( cos(rad*gphifREG(iREG,jREG)) * ( zglamfREG(iREG,jREG) - zglamfGLO(ziEf(iREG,jREG),zjNf(iREG,jREG)) ) )**2  &
-      &          + (                                     gphifREG(iREG,jREG) -  gphifGLO(ziEf(iREG,jREG),zjNf(iREG,jREG)) )**2  )
+  !distSW = sqrt(   ( cos(rad*gphifREG(iREG,jREG)) * ( zglamfREG(iREG,jREG) - zglamfGLO(ziWf(iREG,jREG),zjSf(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphifREG(iREG,jREG) -  gphifGLO(ziWf(iREG,jREG),zjSf(iREG,jREG)) )**2  )
+  !distSE = sqrt(   ( cos(rad*gphifREG(iREG,jREG)) * ( zglamfREG(iREG,jREG) - zglamfGLO(ziEf(iREG,jREG),zjSf(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphifREG(iREG,jREG) -  gphifGLO(ziEf(iREG,jREG),zjSf(iREG,jREG)) )**2  )
+  !distNW = sqrt(   ( cos(rad*gphifREG(iREG,jREG)) * ( zglamfREG(iREG,jREG) - zglamfGLO(ziWf(iREG,jREG),zjNf(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphifREG(iREG,jREG) -  gphifGLO(ziWf(iREG,jREG),zjNf(iREG,jREG)) )**2  )
+  !distNE = sqrt(   ( cos(rad*gphifREG(iREG,jREG)) * ( zglamfREG(iREG,jREG) - zglamfGLO(ziEf(iREG,jREG),zjNf(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphifREG(iREG,jREG) -  gphifGLO(ziEf(iREG,jREG),zjNf(iREG,jREG)) )**2  )
   !--
   wgSWf(iREG,jREG) =   ( zglamfGLO(ziEf(iREG,jREG),zjNf(iREG,jREG)) - zglamfREG(iREG,jREG) ) &
   &                  * (  gphifGLO(ziEf(iREG,jREG),zjNf(iREG,jREG)) -  gphifREG(iREG,jREG) )
@@ -706,7 +710,8 @@ DO jREG=1,my_REG
   endif     
 
   !------------------------------------------------------------
-  if ( zglamuREG(iREG,jREG) .ge. zglamuGLO(zziu(iREG,jREG),zzjt(iREG,jREG)) )  then
+  if ( zglamuREG(iREG,jREG) .ge. zglamuGLO(zziu(iREG,jREG),zzju(iREG,jREG)) &
+  &    .and. zglamuGLO(zziup1(iREG,jREG),zzju(iREG,jREG)) .ge. zglamuGLO(zzium1(iREG,jREG),zzju(iREG,jREG)) )  then
     ziWu(iREG,jREG)   = zziu  (iREG,jREG) ! closest point westward
     ziEu(iREG,jREG)   = zziup1(iREG,jREG) ! closest point eastward
   else
@@ -714,22 +719,23 @@ DO jREG=1,my_REG
     ziEu(iREG,jREG)   = zziu  (iREG,jREG) ! closest point eastward
   endif
   !--
-  if ( gphiuREG(iREG,jREG) .ge. gphiuGLO(zziu(iREG,jREG),zzjt(iREG,jREG)) )  then
-    zjSu(iREG,jREG)   = zzjt  (iREG,jREG) ! closest point southward
-    zjNu(iREG,jREG)   = zzjtp1(iREG,jREG) ! closest point northward
+  if ( gphiuREG(iREG,jREG) .ge. gphiuGLO(zziu(iREG,jREG),zzju(iREG,jREG)) &
+  &    .and. gphiuGLO(zziu(iREG,jREG),zzjup1(iREG,jREG)) .ge. gphiuGLO(zziu(iREG,jREG),zzjum1(iREG,jREG)) )  then
+    zjSu(iREG,jREG)   = zzju  (iREG,jREG) ! closest point southward
+    zjNu(iREG,jREG)   = zzjup1(iREG,jREG) ! closest point northward
   else
-    zjSu(iREG,jREG)   = zzjtm1(iREG,jREG) ! closest point southward
-    zjNu(iREG,jREG)   = zzjt  (iREG,jREG) ! closest point northward
+    zjSu(iREG,jREG)   = zzjum1(iREG,jREG) ! closest point southward
+    zjNu(iREG,jREG)   = zzju  (iREG,jREG) ! closest point northward
   endif
   !--
-  distSW = sqrt(   ( cos(rad*gphiuREG(iREG,jREG)) * ( zglamuREG(iREG,jREG) - zglamuGLO(ziWu(iREG,jREG),zjSu(iREG,jREG)) ) )**2  &
-      &          + (                                     gphiuREG(iREG,jREG) -  gphiuGLO(ziWu(iREG,jREG),zjSu(iREG,jREG)) )**2  )
-  distSE = sqrt(   ( cos(rad*gphiuREG(iREG,jREG)) * ( zglamuREG(iREG,jREG) - zglamuGLO(ziEu(iREG,jREG),zjSu(iREG,jREG)) ) )**2  &
-      &          + (                                     gphiuREG(iREG,jREG) -  gphiuGLO(ziEu(iREG,jREG),zjSu(iREG,jREG)) )**2  )
-  distNW = sqrt(   ( cos(rad*gphiuREG(iREG,jREG)) * ( zglamuREG(iREG,jREG) - zglamuGLO(ziWu(iREG,jREG),zjNu(iREG,jREG)) ) )**2  &
-      &          + (                                     gphiuREG(iREG,jREG) -  gphiuGLO(ziWu(iREG,jREG),zjNu(iREG,jREG)) )**2  )
-  distNE = sqrt(   ( cos(rad*gphiuREG(iREG,jREG)) * ( zglamuREG(iREG,jREG) - zglamuGLO(ziEu(iREG,jREG),zjNu(iREG,jREG)) ) )**2  &
-      &          + (                                     gphiuREG(iREG,jREG) -  gphiuGLO(ziEu(iREG,jREG),zjNu(iREG,jREG)) )**2  )
+  !distSW = sqrt(   ( cos(rad*gphiuREG(iREG,jREG)) * ( zglamuREG(iREG,jREG) - zglamuGLO(ziWu(iREG,jREG),zjSu(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphiuREG(iREG,jREG) -  gphiuGLO(ziWu(iREG,jREG),zjSu(iREG,jREG)) )**2  )
+  !distSE = sqrt(   ( cos(rad*gphiuREG(iREG,jREG)) * ( zglamuREG(iREG,jREG) - zglamuGLO(ziEu(iREG,jREG),zjSu(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphiuREG(iREG,jREG) -  gphiuGLO(ziEu(iREG,jREG),zjSu(iREG,jREG)) )**2  )
+  !distNW = sqrt(   ( cos(rad*gphiuREG(iREG,jREG)) * ( zglamuREG(iREG,jREG) - zglamuGLO(ziWu(iREG,jREG),zjNu(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphiuREG(iREG,jREG) -  gphiuGLO(ziWu(iREG,jREG),zjNu(iREG,jREG)) )**2  )
+  !distNE = sqrt(   ( cos(rad*gphiuREG(iREG,jREG)) * ( zglamuREG(iREG,jREG) - zglamuGLO(ziEu(iREG,jREG),zjNu(iREG,jREG)) ) )**2  &
+  !    &          + (                                     gphiuREG(iREG,jREG) -  gphiuGLO(ziEu(iREG,jREG),zjNu(iREG,jREG)) )**2  )
   !--
   wgSWu(iREG,jREG) =   ( zglamuGLO(ziEu(iREG,jREG),zjNu(iREG,jREG)) - zglamuREG(iREG,jREG) ) &
   &                  * (  gphiuGLO(ziEu(iREG,jREG),zjNu(iREG,jREG)) -  gphiuREG(iREG,jREG) )
@@ -824,7 +830,8 @@ DO jREG=1,my_REG
   endif     
 
   !------------------------------------------------------------
-  if ( zglamvREG(iREG,jREG) .ge. zglamvGLO(zziv(iREG,jREG),zzjt(iREG,jREG)) )  then
+  if ( zglamvREG(iREG,jREG) .ge. zglamvGLO(zziv(iREG,jREG),zzjv(iREG,jREG)) &
+  &    .and. zglamvGLO(zzivp1(iREG,jREG),zzjv(iREG,jREG)) .ge. zglamvGLO(zzivm1(iREG,jREG),zzjv(iREG,jREG)) )  then
     ziWv(iREG,jREG)   = zziv  (iREG,jREG) ! closest point westward
     ziEv(iREG,jREG)   = zzivp1(iREG,jREG) ! closest point eastward
   else
@@ -832,12 +839,13 @@ DO jREG=1,my_REG
     ziEv(iREG,jREG)   = zziv  (iREG,jREG) ! closest point eastward
   endif
   !--
-  if ( gphivREG(iREG,jREG) .ge. gphivGLO(zziv(iREG,jREG),zzjt(iREG,jREG)) )  then
-    zjSv(iREG,jREG)   = zzjt  (iREG,jREG) ! closest point southward
-    zjNv(iREG,jREG)   = zzjtp1(iREG,jREG) ! closest point northward
+  if ( gphivREG(iREG,jREG) .ge. gphivGLO(zziv(iREG,jREG),zzjv(iREG,jREG)) &
+  &    .and. gphivGLO(zziv(iREG,jREG),zzjvp1(iREG,jREG)) .ge. gphivGLO(zziv(iREG,jREG),zzjvm1(iREG,jREG)) )  then
+    zjSv(iREG,jREG)   = zzjv  (iREG,jREG) ! closest point southward
+    zjNv(iREG,jREG)   = zzjvp1(iREG,jREG) ! closest point northward
   else
-    zjSv(iREG,jREG)   = zzjtm1(iREG,jREG) ! closest point southward
-    zjNv(iREG,jREG)   = zzjt  (iREG,jREG) ! closest point northward
+    zjSv(iREG,jREG)   = zzjvm1(iREG,jREG) ! closest point southward
+    zjNv(iREG,jREG)   = zzjv  (iREG,jREG) ! closest point northward
   endif
   !--
   distSW = sqrt(   ( cos(rad*gphivREG(iREG,jREG)) * ( zglamvREG(iREG,jREG) - zglamvGLO(ziWv(iREG,jREG),zjSv(iREG,jREG)) ) )**2  &
