@@ -143,8 +143,11 @@ List of contributors:
         ./submit.sh extract_bathy 01 30
 
         # Else, if you want to put RTOPO bathymetry within the domain while being consistent with the
-        # BDY bathymetry, then fill the &rtopo section of the namlelist and do:
-        ./submit.sh extract_bathy_rtopo 03 30  ## not tested yet
+        # BDY bathymetry, then fill the &bathy_special section of the namlelist and do:
+        ./submit.sh extract_bathy_rtopo 04 30
+        # Another option is to interpolate datasets from a stereographic grid (still with the 
+        # &bathy_special section of the namlelist) :
+        ./submit.sh extract_bathy_stereo 20 80
 
 #########################################################################################################
 #########################################################################################################
