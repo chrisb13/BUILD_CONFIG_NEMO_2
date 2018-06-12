@@ -1,9 +1,16 @@
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   https://github.com/nicojourdain/BUILD_CONFIG_NEMO_2
+
    Nicolas Jourdain, IGE-CNRS, Feb. 2017
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+WARNING : THIS IS A VERSION UNDER DEVELOPMENT, SOME PARTS MAY NOT WORK.
+          FOR A TESTED VERSION OF THESE TOOLS, REFER TO :
+          https://github.com/nicojourdain/BUILD_CONFIG_NEMO
+
 Pre-processing tools to build a regional NEMO configuration laterally forced by a global ocean simulation.
-Tested with NEMO-3.6 but should work with previous NEMO-3.x versions.
+
+General case with a global grid not matching the regional grid (e.g. regional eORCA forced by global ORCA)
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
