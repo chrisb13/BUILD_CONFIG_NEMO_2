@@ -8,17 +8,17 @@
 !-------------------------------------------------------------------------------------------------------------------------------
 &general
 config                = 'WED12'                                      ! configuration name, e.g. 'WED12', 'AMU12', etc
-config_dir            = '/scratch/shared/egige60/input/nemo_WED12'   ! Directory where all the new netcdf files will be stored
+config_dir            = '/fs2/n02/n02/chbull/nemo/bld_configs/input_WED12'   ! Directory where all the new netcdf files will be stored
 /
 !-------------------------------------------------------------------------------------------------------------------------------
 &griddata
-file_in_bathy_extract = '/store/njourd/eORCA12/eORCA12_bathymetry_v2.4.nc'  ! Bathy on the grid from which we extract 
+file_in_bathy_extract = '/fs2/n02/n02/chbull/nemo/bld_configs/input_WED12_Ute/eORCA12_bathymetry_v2.4.nc'  ! Bathy on the grid from which we extract 
                                                                             !       the regional domain (e.g. eORCA12).
-file_in_coord_extract = '/store/njourd/eORCA12/eORCA12_coordinates.nc'      ! Coordinates of the grid from which we extract
+file_in_coord_extract = '/fs2/n02/n02/chbull/nemo/bld_configs/input_WED12_Ute/eORCA12_coordinates.nc'      ! Coordinates of the grid from which we extract
                                                                             !       the regional domain (e.g. eORCA12).
-file_in_bathy_bdy     = '/store/njourd/ORCA025/SOUTHG2V3_ORCA025_bathy.nc'  ! Bathy on the grid corresponding to the 
+file_in_bathy_bdy     = '/fs2/n02/n02/chbull/nemo/bld_configs/input_WED12_nj_chloro/SOUTHG2V3_ORCA025_bathy.nc'  ! Bathy on the grid corresponding to the 
                                                                             !       lateral boundary conditions (e.g. ORCA025).
-file_in_coord_bdy     = '/store/njourd/ORCA025/SOUTHG2V3_ORCA025.L75-MJM91_mesh_hgr.nc'  ! Coordinates of the grid corresponding to the
+file_in_coord_bdy     = '/fs2/n02/n02/chbull/nemo/bld_configs/input_WED12_nj_chloro/SOUTHG2V3_ORCA025.L75-MJM91_mesh_hgr.nc'  ! Coordinates of the grid corresponding to the
                                                                                          ! lateral boundary conditions (e.g. ORCA025).
 nn_isfcav             = 1                                                   ! = 0 if the regional domain DOES NOT include ice shelves.
                                                                             ! = 1 if the regional domain includes ice shelves but not
@@ -31,7 +31,7 @@ nn_perio              = 0                                                   ! = 
 !
 ! Choose the domain bounds in the file from which we extract the regional domain (e.g. WED12 domain within eORCA12) :
 nn_imin_extract       = 2464
-nn_imax_extract       = 3585
+nn_imax_extract       = 3417
 nn_jmin_extract       =  151
 nn_jmax_extract       = 1122
 /
@@ -180,6 +180,6 @@ file_runoff_in       = '/store/njourd/ORCA025/SOUTHG2V3_ORCA025_climato_Icebergs
 /
 !-------------------------------------------------------------------------------------------------------------------------------
 &chloro
-file_chloro_in       = '/store/njourd/ORCA025/SOUTHG2V3_ORCA025_chlorophyll.nc'  ! runoff for global/large-scale file
+file_chloro_in       = '/fs2/n02/n02/chbull/nemo/bld_configs/input_WED12_Ute/SOUTHG2V3_ORCA025_chlorophyll.nc'  ! runoff for global/large-scale file
 rn_chla              = 0.55   ! default CHLA (to fill places in the regional domain uncovered in the global file)
 /
