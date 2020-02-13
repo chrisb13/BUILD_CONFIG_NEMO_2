@@ -1,10 +1,9 @@
-
-FC := ifort 
+FC := ftn
 FFLAGS := -O
 LDFLAGS := 
 
-NETCDF_INCDIR := /opt/software/occigen/libraries/netcdf/4.4.0_fortran-4.4.2/hdf5/1.8.17/intel/17.0/openmpi/intel/2.0.1/include
-NETCDF_LIBDIR := 
+NETCDF_INCDIR := /opt/cray/netcdf-hdf5parallel/4.4.1.1/INTEL/15.0/include
+NETCDF_LIBDIR := /opt/cray/netcdf-hdf5parallel/4.4.1.1/INTEL/15.0/lib 
 NETCDF_LIBS := -lnetcdf -lnetcdff
 
 SCRIPTS_DIR ?= ../scripts
